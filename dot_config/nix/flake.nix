@@ -13,13 +13,21 @@
       in
       {
         packages.default = pkgs.buildEnv {
-          name = "my-cli-tools";
+          name = "cli-tools";
           paths = with pkgs; [
             starship
             fish
             atuin
             zoxide
             fzf
+            chezmoi
+            gh
+            glab
+            lazygit
+            ripgrep
+            shellcheck
+            fd
+            curl
           ];
         };
 
@@ -31,6 +39,14 @@
             atuin
             zoxide
             fzf
+            chezmoi
+            gh
+            glab
+            lazygit
+            ripgrep
+            shellcheck
+            fd
+            curl
           ];
         };
       }
