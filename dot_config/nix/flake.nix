@@ -16,6 +16,7 @@
           name = "cli-tools";
           paths = with pkgs; [
             starship
+	    neovim
             fish
             atuin
             zoxide
