@@ -31,6 +31,7 @@
 	    neovim
             fd
             curl
+	    nerd-fonts.fira-code
           ];
         };
 
