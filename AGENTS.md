@@ -8,3 +8,11 @@ This repository is designed to be managed and interacted with by AI agents (like
 - **Surgical Changes**: Make precise modifications to configuration files.
 - **Security**: Never commit sensitive information (API keys, secrets) to this repository. Use `chezmoi`'s password manager integration if necessary.
 - **Style**: Maintain consistent formatting in dotfiles.
+
+## Project Structure & Conventions
+
+### Personal Scripts
+- **Location**: `dot_config/personalScripts/`
+- **Nix Installation**: A script in `01-InstallNix/run_before_onchange_install-nix.sh` handles the installation of Nix using the Determinate Systems installer.
+- **Execution Order**: Scripts prefixed with `run_before_` are prioritized by `chezmoi` to ensure dependencies like Nix are available for other configuration tasks.
+- **Logging**: Installation scripts should log their status (success/error/info) to `~/.config/personalScripts/<ServiceName>/<ServiceName>.log` for troubleshooting.
