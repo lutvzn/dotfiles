@@ -23,6 +23,7 @@
             chezmoi
             gh
             glab
+            pipx
             lazygit
             ripgrep
             shellcheck
