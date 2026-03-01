@@ -1,8 +1,15 @@
 #!/bin/bash
 # hash: {{ include "dot_config/nix/flake.nix" | sha256sum }}
 
-if nix profile list | grep -q "path:$HOME/.config/nix"; then
-    nix profile upgrade '.*'
-else
-    nix profile install "path:$HOME/.config/nix"
+FLAKE="path:$HOME/.config/nix"
+
+# 1. Find the index of the old installation
+INDEX=$(nix profile list | awk -v p="$FLAKE" '/Index:/ {i=$2} $0 ~ p {print i}')
+
+# 2. Remove it so we don't get conflicts or duplicate entries
+if [ -n "$INDEX" ]; then
+    nix profile remove "$INDEX"
 fi
+
+# 3. Add it fresh (using 'add' instead of the deprecated 'install')
+nix profile add "$FLAKE"
