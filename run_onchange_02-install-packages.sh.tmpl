@@ -1,45 +1,8 @@
 #!/bin/bash
-
-# run_onchange_install-packages.sh
-# Installs or updates Nix packages defined in ~/.config/nix/flake.nix
-# This script is triggered whenever the flake.nix file changes.
 # hash: {{ include "dot_config/nix/flake.nix" | sha256sum }}
 
-LOG_DIR="$HOME/.config/personalScripts/logs"
-LOG_FILE="$LOG_DIR/run_onchange_02-install-packages.log"
-FLAKE_DIR="$HOME/.config/nix"
-
-# Ensure the log directory exists
-mkdir -p "$LOG_DIR"
-
-log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
-}
-
-if ! command -v nix >/dev/null 2>&1; then
-    log_message "ERROR: Nix is not installed. Skipping package installation."
-    exit 1
-fi
-
-log_message "INFO: Updating/Installing packages from $FLAKE_DIR..."
-
-# Check if already installed
-if nix profile list --extra-experimental-features "nix-command flakes" | grep -q "$FLAKE_DIR"; then
-    log_message "INFO: Flake already in profile, performing upgrade..."
-    # Identify the index to upgrade
-    INDEX=$(nix profile list --extra-experimental-features "nix-command flakes" | grep "$FLAKE_DIR" | awk '{print $1}' | tr -d '.')
-    if nix profile upgrade "$INDEX" --extra-experimental-features "nix-command flakes"; then
-        log_message "SUCCESS: Packages upgraded successfully."
-    else
-        log_message "ERROR: Failed to upgrade packages."
-        exit 1
-    fi
+if nix profile list | grep -q "path:$HOME/.config/nix"; then
+    nix profile upgrade '.*'
 else
-    log_message "INFO: Flake not in profile, performing fresh install..."
-    if nix profile install "$FLAKE_DIR" --extra-experimental-features "nix-command flakes" --accept-flake-config; then
-        log_message "SUCCESS: Packages installed successfully."
-    else
-        log_message "ERROR: Failed to install packages."
-        exit 1
-    fi
+    nix profile install "path:$HOME/.config/nix"
 fi
