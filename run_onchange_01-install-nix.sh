@@ -4,8 +4,8 @@
 # Installs Nix using Determinate Systems installer if it's not already installed.
 # This script runs before everything else in chezmoi.
 
-LOG_DIR="$HOME/.config/personalScripts/01-InstallNix"
-LOG_FILE="$LOG_DIR/InstallNix.log"
+LOG_DIR="$HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_onchange_01-install-nix.log"
 
 # Ensure the log directory exists
 mkdir -p "$LOG_DIR"

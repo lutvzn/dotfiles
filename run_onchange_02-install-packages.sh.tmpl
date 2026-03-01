@@ -5,8 +5,8 @@
 # This script is triggered whenever the flake.nix file changes.
 # hash: {{ include "dot_config/nix/flake.nix" | sha256sum }}
 
-LOG_DIR="$HOME/.config/personalScripts/02-InstallPackages"
-LOG_FILE="$LOG_DIR/InstallPackages.log"
+LOG_DIR="$HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_onchange_02-install-packages.log"
 FLAKE_DIR="$HOME/.config/nix"
 
 # Ensure the log directory exists
