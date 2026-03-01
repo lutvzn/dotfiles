@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# This hash ensures the script runs whenever flake.nix changes:
+# flake.nix hash: {{ include "dot_config/nix/flake.nix" | sha256sum }}
+
+LOG_DIR="$HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_onchange_02-install-packages.log"
+
+# Ensure the log directory exists
+mkdir -p "$LOG_DIR"
+
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+# Source Nix environment in case it was just installed by the previous script
+if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
+  . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
+fi
+
+log_message "Installing/Updating Nix packages from flake..."
+
+# Install or upgrade the default package defined in your flake
+if nix profile list | grep -q 'packages.*x86_64-linux.default'; then
+    log_message "Upgrading Nix packages from flake..."
+    if nix profile upgrade --all; then
+        log_message "SUCCESS: Nix packages upgraded successfully."
+    else
+        log_message "ERROR: Failed to upgrade Nix packages."
+        exit 1
+    fi
+else
+    log_message "Installing Nix packages from flake for the first time..."
+    if nix profile install ~/.config/nix#default; then
+        log_message "SUCCESS: Nix packages installed successfully."
+    else
+        log_message "ERROR: Failed to install Nix packages."
+        exit 1
+    fi
+fi

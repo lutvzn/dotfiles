@@ -27,6 +27,7 @@
             lazygit
             ripgrep
             shellcheck
+	    neovim
             fd
             curl
           ];
