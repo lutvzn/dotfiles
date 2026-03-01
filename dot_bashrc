@@ -52,8 +52,8 @@ if [ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
 fi
 
 # starship
-if [ -x "/home/linuxbrew/.linuxbrew/bin/starship" ]; then
-  eval "$(/home/linuxbrew/.linuxbrew/bin/starship init bash)"
+if [ -x "~/.nix-profile/bin/starship" ]; then
+  eval "$(~/.nix-profile/bin/starship init bash)"
 fi
 
 # fzf (fuzzy finder)

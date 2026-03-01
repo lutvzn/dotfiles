@@ -23,17 +23,23 @@ fi
 
 log_message "INFO: Updating/Installing packages from $FLAKE_DIR..."
 
-# We use 'nix profile install' or 'nix profile upgrade'
-# Since we want to ensure everything in the flake is present, we can use:
-if nix profile install "$FLAKE_DIR" --extra-experimental-features "nix-command flakes" --accept-flake-config; then
-    log_message "SUCCESS: Packages updated/installed successfully."
-else
-    # If already installed, try upgrading
-    log_message "INFO: 'nix profile install' failed or already exists, attempting 'nix profile upgrade'..."
-    if nix profile upgrade 0 --extra-experimental-features "nix-command flakes"; then
+# Check if already installed
+if nix profile list --extra-experimental-features "nix-command flakes" | grep -q "$FLAKE_DIR"; then
+    log_message "INFO: Flake already in profile, performing upgrade..."
+    # Identify the index to upgrade
+    INDEX=$(nix profile list --extra-experimental-features "nix-command flakes" | grep "$FLAKE_DIR" | awk '{print $1}' | tr -d '.')
+    if nix profile upgrade "$INDEX" --extra-experimental-features "nix-command flakes"; then
         log_message "SUCCESS: Packages upgraded successfully."
     else
-        log_message "ERROR: Failed to update/install packages from flake."
+        log_message "ERROR: Failed to upgrade packages."
+        exit 1
+    fi
+else
+    log_message "INFO: Flake not in profile, performing fresh install..."
+    if nix profile install "$FLAKE_DIR" --extra-experimental-features "nix-command flakes" --accept-flake-config; then
+        log_message "SUCCESS: Packages installed successfully."
+    else
+        log_message "ERROR: Failed to install packages."
         exit 1
     fi
 fi
