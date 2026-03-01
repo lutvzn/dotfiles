@@ -22,7 +22,8 @@
             fzf
             chezmoi
             gh
-            glab
+            go
+	    glab
             pipx
             lazygit
             ripgrep
