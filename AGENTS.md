@@ -14,5 +14,7 @@ This repository is designed to be managed and interacted with by AI agents (like
 ### Personal Scripts
 - **Location**: `dot_config/personalScripts/`
 - **Nix Installation**: A script in `01-InstallNix/run_before_onchange_install-nix.sh` handles the installation of Nix using the Determinate Systems installer.
+- **Nix Packages**: The file `dot_config/nix/flake.nix` defines the core CLI toolset.
+- **Package Management**: A script in `02-InstallPackages/run_onchange_install-packages.sh` triggers updates whenever `flake.nix` changes.
 - **Execution Order**: Scripts prefixed with `run_before_` are prioritized by `chezmoi` to ensure dependencies like Nix are available for other configuration tasks.
 - **Logging**: Installation scripts should log their status (success/error/info) to `~/.config/personalScripts/<ServiceName>/<ServiceName>.log` for troubleshooting.
