@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 is_ostree() {
     [ -d /sys/fs/ostree ] || [ -f /run/ostree-booted ]
