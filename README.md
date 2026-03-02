@@ -7,7 +7,7 @@ My personal dotfiles, managed with [chezmoi](https://www.chezmoi.io/).
 ### One-line binary install, init, and apply
 
 ```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply $USER
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply lutvzn
 ```
 
 ### Manual installation and initialization
