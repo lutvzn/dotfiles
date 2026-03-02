@@ -21,15 +21,16 @@
 	    curl
 	    fd
 	    fish
+	    fnm
 	    fzf	 
             gh
             go
 	    glab
 	    lazygit
-	    neovim
-            node_24
+	    neovim  
 	    pipx
-            ripgrep
+            python314 
+	    ripgrep
             shellcheck
 	    starship
 	    zoxide
