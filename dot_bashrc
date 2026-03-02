@@ -19,14 +19,6 @@ if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]; then
     PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 fi
 
-# fnm (Fast Node Manager)
-FNM_PATH="/home/lutvzn/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
-  PATH="$FNM_PATH:$PATH"
-fi
-
-export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
-
 export PATH
 
 # Optional: Disable systemctl auto-paging
@@ -36,10 +28,6 @@ export PATH
 # 3. Tool Initialization
 # -----------------------------------------------------------------------------
 
-# fnm
-if [ -d "$FNM_PATH" ]; then
-  eval "`fnm env`"
-fi
 
 # zoxide (smarter cd)
 if command -v zoxide &> /dev/null; then

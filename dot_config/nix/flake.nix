@@ -27,7 +27,8 @@
 	    glab
 	    lazygit
 	    neovim
-            pipx
+            node_24
+	    pipx
             ripgrep
             shellcheck
 	    starship
