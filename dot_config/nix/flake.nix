@@ -16,44 +16,25 @@
           name = "cli-tools";
           paths = with pkgs; [
             atuin
-	    bun
-	    chezmoi
-	    curl
-	    fd
-	    fish
-	    fnm
-	    fzf	 
+            bun
+            chezmoi
+            curl
+            fd
+            fish
+            fnm
+            fzf
             gh
             go
-	    glab
-	    lazygit
-	    neovim  
-	    pipx
-            python314 
-	    ripgrep
-            shellcheck
-	    starship
-	    zoxide
-	    nerd-fonts.fira-code
-          ];
-        };
-
-        # A devShell for testing
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            starship
-            fish
-            atuin
-            zoxide
-            fzf
-            chezmoi
-            gh
             glab
             lazygit
+            neovim
+            pipx
+            python314
             ripgrep
             shellcheck
-            fd
-            curl
+            starship
+            zoxide
+            nerd-fonts.fira-code
           ];
         };
       }
