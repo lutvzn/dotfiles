@@ -15,22 +15,23 @@
         packages.default = pkgs.buildEnv {
           name = "cli-tools";
           paths = with pkgs; [
-            starship
-            fish
             atuin
-            zoxide
-            fzf
-            chezmoi
+	    bun
+	    chezmoi
+	    curl
+	    fd
+	    fish
+	    fzf	 
             gh
             go
 	    glab
+	    lazygit
+	    neovim
             pipx
-            lazygit
             ripgrep
             shellcheck
-	    neovim
-            fd
-            curl
+	    starship
+	    zoxide
 	    nerd-fonts.fira-code
           ];
         };
