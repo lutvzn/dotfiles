@@ -1,0 +1,117 @@
+# yaml-language-server: $schema=https://aka.ms/configuration-schema/0.2
+properties:
+  configurationVersion: 0.2.0
+  resources:
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Atuin
+      directives:
+        description: Install Atuin
+      settings:
+        id: Atuinsh.Atuin
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Bun
+      directives:
+        description: Install Bun
+      settings:
+        id: Oven-sh.Bun
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Chezmoi
+      directives:
+        description: Install Chezmoi
+      settings:
+        id: twpayne.chezmoi
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Curl
+      directives:
+        description: Install cURL
+      settings:
+        id: cURL.cURL
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Fd
+      directives:
+        description: Install fd
+      settings:
+        id: sharkdp.fd
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Fnm
+      directives:
+        description: Install fnm
+      settings:
+        id: Schniz.fnm
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Fzf
+      directives:
+        description: Install fzf
+      settings:
+        id: junegunn.fzf
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: GitHubCLI
+      directives:
+        description: Install GitHub CLI
+      settings:
+        id: GitHub.cli
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Go
+      directives:
+        description: Install Go
+      settings:
+        id: GoLang.Go
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Lazygit
+      directives:
+        description: Install Lazygit
+      settings:
+        id: JesseDuffield.lazygit
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Neovim
+      directives:
+        description: Install Neovim
+      settings:
+        id: Neovim.Neovim
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Python
+      directives:
+        description: Install Python 3.14
+      settings:
+        id: Python.Python.3.14
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Ripgrep
+      directives:
+        description: Install ripgrep
+      settings:
+        id: BurntSushi.ripgrep.MSVC
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Shellcheck
+      directives:
+        description: Install Shellcheck
+      settings:
+        id: koalaman.shellcheck
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Starship
+      directives:
+        description: Install Starship
+      settings:
+        id: Starship.Starship
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Zoxide
+      directives:
+        description: Install Zoxide
+      settings:
+        id: ajeetdsouza.zoxide
+        source: winget
+

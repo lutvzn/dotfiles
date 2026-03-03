@@ -1,0 +1,17 @@
+{{ if eq .chezmoi.os "windows" -}}
+# Winget configuration hash: {{ include "dot_config/winget/configuration.yaml" | sha256sum }}
+
+$configFile = Join-Path $HOME ".config/winget/configuration.yaml"
+
+if (Test-Path $configFile) {
+    Write-Host "Ensuring Winget configuration features are enabled..."
+    winget.exe configure --enable
+
+    Write-Host "Applying Winget configuration from $configFile..."
+    # Using --accept-configuration-agreements to skip the prompt
+    winget.exe configure --file $configFile --accept-configuration-agreements
+} else {
+    Write-Error "Winget configuration file not found at $configFile"
+    exit 1
+}
+{{ end -}}

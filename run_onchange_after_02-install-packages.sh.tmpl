@@ -1,3 +1,4 @@
+{{ if eq .chezmoi.os "linux" -}}
 #!/bin/bash
 
 # This hash ensures the script runs whenever flake.nix changes:
@@ -38,3 +39,4 @@ else
         exit 1
     fi
 fi
+{{ end -}}
