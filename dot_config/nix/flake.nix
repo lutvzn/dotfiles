@@ -19,6 +19,7 @@
             bun
             chezmoi
             curl
+            eza
             fd
             fish
             fnm
@@ -33,6 +34,7 @@
             ripgrep
             shellcheck
             starship
+            ugrep
             zoxide
             nerd-fonts.fira-code
           ];
