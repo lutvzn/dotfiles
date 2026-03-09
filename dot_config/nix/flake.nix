@@ -29,6 +29,7 @@
             glab
             lazygit
             neovim
+            nushell
             pipx
             python314
             ripgrep

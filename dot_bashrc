@@ -1,4 +1,4 @@
-# .bashrc
+# .bashrc - Organized & Minimalist
 
 # -----------------------------------------------------------------------------
 # 1. Global Definitions & Non-Interactive Check
@@ -11,48 +11,53 @@
 [[ $- != *i* ]] && return
 
 # -----------------------------------------------------------------------------
-# 2. Environment Variables & PATH
+# 2. Environment & PATH
 # -----------------------------------------------------------------------------
 
-# Prepend user bin directories
-if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]; then
-  PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+# Prepend user bin and Nix directories
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+
+if [ -d "$HOME/.nix-profile/bin" ]; then
+  export PATH="$HOME/.nix-profile/bin:$PATH"
 fi
 
-export PATH
-
-# Optional: Disable systemctl auto-paging
-# export SYSTEMD_PAGER=
+# Cargo / Rust environment
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # -----------------------------------------------------------------------------
 # 3. Tool Initialization
 # -----------------------------------------------------------------------------
 
-# zoxide (smarter cd)
-if command -v zoxide &>/dev/null; then
-  eval "$(zoxide init bash)"
-fi
+# Specialized bash-prexec (often needed for Atuin)
+[ -f /usr/share/bash-prexec ] && . /usr/share/bash-prexec
 
-# Nix profile
-if [ -d "$HOME/.nix-profile/bin" ]; then
-  export PATH="$HOME/.nix-profile/bin:$PATH"
-fi
-
-# starship
-if command -v starship &>/dev/null; then
-  eval "$(starship init bash)"
-fi
-
-# fzf (fuzzy finder)
-if command -v fzf &>/dev/null; then
-  eval "$(fzf --bash)"
-fi
+# Generic tool init (only if the command exists)
+[ "$(command -v zoxide)" ] && eval "$(zoxide init bash)"
+[ "$(command -v starship)" ] && eval "$(starship init bash)"
+[ "$(command -v atuin)" ] && eval "$(atuin init bash)"
+[ "$(command -v fzf)" ] && eval "$(fzf --bash)"
 
 # -----------------------------------------------------------------------------
 # 4. Aliases & Functions
 # -----------------------------------------------------------------------------
 
-# Source directory of scripts
+# Modern replacements (eza for ls, ug for grep)
+if command -v eza &>/dev/null; then
+  alias ls='eza'
+  alias ll='eza -l --icons=auto --group-directories-first'
+  alias l.='eza -d .*'
+  alias l1='eza -1'
+fi
+
+if command -v ug &>/dev/null; then
+  alias grep='ug'
+  alias egrep='ug -E'
+  alias fgrep='ug -F'
+fi
+
+# Source custom scripts and external alias files
+[ -f ~/.config/aliases ] && . ~/.config/aliases
+
 if [ -d ~/.bashrc.d ]; then
   for rc in ~/.bashrc.d/*; do
     [ -f "$rc" ] && . "$rc"
@@ -60,52 +65,10 @@ if [ -d ~/.bashrc.d ]; then
   unset rc
 fi
 
-# Source aliases
-[ -f ~/.config/aliases ] && . ~/.config/aliases
-
 # -----------------------------------------------------------------------------
-# 5. Prompt Customization
+# 5. Prompt Customization (Fallback)
 # -----------------------------------------------------------------------------
 
-# Optimized Git branch function
-# Uses internal git commands to avoid spawning multiple subprocesses/sed
-parse_git_branch() {
-  # Fast check if inside git tree
-  git rev-parse --is-inside-work-tree &>/dev/null || return
-
-  local branch
-  # Get branch name or short commit hash
-  branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
-
-  # Check for uncommitted changes
-  if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-    echo " $branch*"
-  else
-    echo " $branch"
-  fi
-}
-if [ "$(command -v eza)" ]; then
-  alias ll='eza -l --icons=auto --group-directories-first'
-  alias l.='eza -d .*'
-  alias ls='eza'
-  alias l1='eza -1'
-fi
-
-# ugrep for grep
-if [ "$(command -v ug)" ]; then
-  alias grep='ug'
-  alias egrep='ug -E'
-  alias fgrep='ug -F'
-  alias xzgrep='ug -z'
-  alias xzegrep='ug -zE'
-  alias xzfgrep='ug -zF'
-fi
-
-# Two-line Minimalist Colorful Prompt
-# Line 1: user@host dir git_branch
-# Line 2: ❯
-PS1='\[\e[1;32m\]\u@\h\[\e[m\] \[\e[1;36m\]\w\[\e[m\]\[\e[1;33m\]$(parse_git_branch)\[\e[m\]\n\[\e[1;32m\]❯\[\e[m\] '
-. "$HOME/.cargo/env"
-### bling.sh source start
-test -f /usr/share/bazzite-cli/bling.sh && source /usr/share/bazzite-cli/bling.sh
-### bling.sh source end
+# Note: If starship is active (initialized above), it will override this PS1.
+# This serves as a clean backup prompt.
+PS1='\[\e[1;32m\]\u@\h\[\e[m\] \[\e[1;36m\]\w\[\e[m\]\n\[\e[1;32m\]❯\[\e[m\] '
