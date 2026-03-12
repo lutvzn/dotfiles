@@ -36,6 +36,7 @@ fi
 [ "$(command -v starship)" ] && eval "$(starship init bash)"
 [ "$(command -v atuin)" ] && eval "$(atuin init bash)"
 [ "$(command -v fzf)" ] && eval "$(fzf --bash)"
+[ "$(command -v fnm)" ] && eval "$(fnm env --use-on-cd --shell bash)"
 
 # -----------------------------------------------------------------------------
 # 4. Aliases & Functions
