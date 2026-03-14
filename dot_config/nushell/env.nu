@@ -16,3 +16,21 @@
 #
 # You can remove these comments if you want or leave
 # them for future reference.
+
+# Prepend user bin and Nix directories
+$env.PATH = (
+    $env.PATH
+    | split row (char esep)
+    | prepend [
+        ($env.HOME | path join ".local" "bin")
+        ($env.HOME | path join "bin")
+        ($env.HOME | path join ".cargo" "bin")
+    ]
+)
+
+let nix_bin = ("~/.nix-profile/bin" | path expand)
+if ($nix_bin | path exists) {
+    $env.PATH = ($env.PATH | split row (char esep) | prepend $nix_bin)
+}
+
+$env.PATH = ($env.PATH | uniq)
