@@ -14,7 +14,7 @@
       in
       {
         packages.default = pkgs.buildEnv {
-          name = "cli-tools";
+          name = "cli";
           paths = cliPackages;
         };
       }
