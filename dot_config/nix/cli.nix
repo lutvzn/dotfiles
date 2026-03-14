@@ -1,0 +1,25 @@
+{ pkgs }: with pkgs; [
+  atuin
+  bun
+  chezmoi
+  curl
+  eza
+  fd
+  fish
+  fnm
+  fzf
+  gh
+  go
+  glab
+  lazygit
+  neovim
+  nushell
+  pipx
+  python314
+  ripgrep
+  shellcheck
+  starship
+  ugrep
+  zoxide
+  nerd-fonts.fira-code
+]
