@@ -27,4 +27,9 @@ if status is-interactive
         alias egrep='ug -E'
         alias fgrep='ug -F'
     end
+
+    # Source custom aliases
+    if test -f ~/.config/aliases
+        source ~/.config/aliases
+    end
 end

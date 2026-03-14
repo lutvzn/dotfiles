@@ -10,35 +10,12 @@
     utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        cliPackages = import ./cli.nix { inherit pkgs; };
       in
       {
         packages.default = pkgs.buildEnv {
           name = "cli-tools";
-          paths = with pkgs; [
-            atuin
-            bun
-            chezmoi
-            curl
-            eza
-            fd
-            fish
-            fnm
-            fzf
-            gh
-            go
-            glab
-            lazygit
-            neovim
-            nushell
-            pipx
-            python314
-            ripgrep
-            shellcheck
-            starship
-            ugrep
-            zoxide
-            nerd-fonts.fira-code
-          ];
+          paths = cliPackages;
         };
       }
     );
