@@ -4,6 +4,7 @@
   chezmoi
   curl
   eza
+  fastfetch
   fd
   fish
   fnm
