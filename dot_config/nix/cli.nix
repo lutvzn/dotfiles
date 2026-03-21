@@ -10,13 +10,9 @@
   fnm
   fzf
   gh
-  go
-  glab
   lazygit
   neovim
   nushell
-  pipx
-  python314
   ripgrep
   shellcheck
   starship
