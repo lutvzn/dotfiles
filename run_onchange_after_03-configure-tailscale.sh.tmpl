@@ -1,0 +1,23 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+# tailscaled.service hash: {{ include "dot_config/services/tailscaled.service.tmpl" | sha256sum }}
+
+SERVICE_SOURCE="{{ .chezmoi.homeDir }}/.config/services/tailscaled.service"
+SERVICE_DEST="/etc/systemd/system/tailscaled.service"
+
+if [ -f "$SERVICE_SOURCE" ]; then
+    echo "Installing tailscaled.service to systemd..."
+    sudo cp "$SERVICE_SOURCE" "$SERVICE_DEST"
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now tailscaled.service
+    echo "tailscaled.service installed and started."
+
+    echo "Configuring tailscale operator..."
+    # Wait for the socket to be ready
+    sleep 5
+    sudo {{ .chezmoi.homeDir }}/.nix-profile/bin/tailscale set --operator=$USER
+else
+    echo "Warning: $SERVICE_SOURCE not found. Skipping tailscale service installation."
+fi
+{{ end -}}

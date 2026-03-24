@@ -13,9 +13,11 @@
   lazygit
   neovim
   nushell
+  qrencode
   ripgrep
   shellcheck
   starship
+  tailscale
   ugrep
   zoxide
   nerd-fonts.fira-code
