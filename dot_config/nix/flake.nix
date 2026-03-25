@@ -7,11 +7,15 @@
   };
 
   outputs = { self, nixpkgs, utils }:
-    utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-        cliPackages = import ./cli.nix { inherit pkgs; };
-      in
+  utils.lib.eachDefaultSystem (system:
+    let
+      pkgs = import nixpkgs {
+        inherit system;
+        config = {
+          allowUnfree = true;
+        };
+      };
+      cliPackages = import ./cli.nix { inherit pkgs; };      in
       {
         packages.default = pkgs.buildEnv {
           name = "cli";

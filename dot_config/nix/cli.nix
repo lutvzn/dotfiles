@@ -15,6 +15,7 @@
   neovim
   nushell
   qrencode
+  resilio-sync
   ripgrep
   shellcheck
   starship

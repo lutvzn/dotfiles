@@ -1,0 +1,11 @@
+[Unit]
+Description=Resilio Sync
+Documentation=https://help.resilio.com/
+After=network.target
+
+[Service]
+ExecStart={{ .chezmoi.homeDir }}/.nix-profile/bin/rslsync --nodaemon --config {{ .chezmoi.homeDir }}/.config/resilio-sync/rslsync.conf
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

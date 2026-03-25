@@ -1,0 +1,25 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+# resilio-sync.service hash: {{ include "dot_config/systemd/user/resilio-sync.service.tmpl" | sha256sum }}
+# resilio-sync.conf hash: {{ include "dot_config/resilio-sync/rslsync.conf.tmpl" | sha256sum }}
+
+log_message() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
+}
+
+log_message "Configuring resilio-sync user service..."
+
+# Ensure the sync directory exists
+mkdir -p "$HOME/Sync"
+
+# Reload systemd user daemon
+systemctl --user daemon-reload
+
+# Enable and start the service
+if systemctl --user enable --now resilio-sync.service; then
+  log_message "SUCCESS: resilio-sync user service enabled and started."
+else
+  log_message "WARNING: Could not enable resilio-sync user service."
+fi
+{{ end -}}
