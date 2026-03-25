@@ -3,6 +3,7 @@
 
 # This hash ensures the script runs whenever flake.nix changes:
 # flake.nix hash: {{ include "dot_config/nix/flake.nix" | sha256sum }}
+# flake.lock hash: {{ include "dot_config/nix/flake.lock" | sha256sum }}
 # cli.nix hash: {{ include "dot_config/nix/cli.nix" | sha256sum }}
 
 LOG_DIR="$HOME/.config/personalScripts/logs"
