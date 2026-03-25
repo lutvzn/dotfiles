@@ -20,6 +20,7 @@
   starship
   tailscale
   ugrep
+  zimfw
   zoxide
   nerd-fonts.fira-code
 ]

@@ -22,7 +22,19 @@ fi
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # -----------------------------------------------------------------------------
-# 3. Prompt Customization (Fallback)
+# 3. Zim Shell Modules (via Nix)
+# -----------------------------------------------------------------------------
+
+ZIM_HOME=${ZIM_HOME:-${XDG_CACHE_HOME:-${HOME}/.cache}/zim}
+if [[ -f "$HOME/.nix-profile/zimfw.zsh" ]]; then
+  if [[ ! -e ${ZIM_HOME}/init.zsh ]]; then
+    source "$HOME/.nix-profile/zimfw.zsh" install
+  fi
+  source ${ZIM_HOME}/init.zsh
+fi
+
+# -----------------------------------------------------------------------------
+# 4. Prompt Customization (Fallback)
 # -----------------------------------------------------------------------------
 
 # This serves as a clean backup prompt.
@@ -31,7 +43,7 @@ PROMPT='%F{green}%n@%m%f %F{cyan}%~%f
 %F{green}❯%f '
 
 # -----------------------------------------------------------------------------
-# 4. Tool Initialization
+# 5. Tool Initialization
 # -----------------------------------------------------------------------------
 
 # Generic tool init (only if the command exists)
@@ -42,7 +54,7 @@ PROMPT='%F{green}%n@%m%f %F{cyan}%~%f
 [ "$(command -v fnm)" ] && eval "$(fnm env --use-on-cd --shell zsh)"
 
 # -----------------------------------------------------------------------------
-# 5. Aliases & Functions
+# 6. Aliases & Functions
 # -----------------------------------------------------------------------------
 
 # Modern replacements (eza for ls, ug for grep)
