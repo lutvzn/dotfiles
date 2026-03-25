@@ -1,5 +1,6 @@
 { pkgs }: with pkgs; [
   atuin
+  blesh
   bun
   chezmoi
   curl

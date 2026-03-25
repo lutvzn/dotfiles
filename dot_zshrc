@@ -1,17 +1,11 @@
-# .bashrc - Organized & Minimalist
+# .zshrc - Organized & Minimalist (Adapted from .bashrc)
 
 # -----------------------------------------------------------------------------
 # 1. Global Definitions & Non-Interactive Check
 # -----------------------------------------------------------------------------
 
-# Source global definitions
-[ -f /etc/bashrc ] && . /etc/bashrc
-
 # If not running interactively, don't do anything else
-[[ $- != *i* ]] && return
-
-# Initialize blesh (should be early)
-[ -f "$HOME/.nix-profile/share/blesh/ble.sh" ] && . "$HOME/.nix-profile/share/blesh/ble.sh"
+[[ -o interactive ]] || return
 
 # -----------------------------------------------------------------------------
 # 2. Environment & PATH
@@ -28,21 +22,27 @@ fi
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # -----------------------------------------------------------------------------
-# 3. Tool Initialization
+# 3. Prompt Customization (Fallback)
 # -----------------------------------------------------------------------------
 
-# Specialized bash-prexec (often needed for Atuin)
-[ -f /usr/share/bash-prexec ] && . /usr/share/bash-prexec
+# This serves as a clean backup prompt.
+# If tools like starship are initialized below, they will override this.
+PROMPT='%F{green}%n@%m%f %F{cyan}%~%f
+%F{green}❯%f '
+
+# -----------------------------------------------------------------------------
+# 4. Tool Initialization
+# -----------------------------------------------------------------------------
 
 # Generic tool init (only if the command exists)
-[ "$(command -v zoxide)" ] && eval "$(zoxide init bash)"
-[ "$(command -v starship)" ] && eval "$(starship init bash)"
-[ "$(command -v atuin)" ] && eval "$(atuin init bash)"
-[ "$(command -v fzf)" ] && eval "$(fzf --bash)"
-[ "$(command -v fnm)" ] && eval "$(fnm env --use-on-cd --shell bash)"
+[ "$(command -v zoxide)" ] && eval "$(zoxide init zsh)"
+[ "$(command -v starship)" ] && eval "$(starship init zsh)"
+[ "$(command -v atuin)" ] && eval "$(atuin init zsh)"
+[ "$(command -v fzf)" ] && source <(fzf --zsh)
+[ "$(command -v fnm)" ] && eval "$(fnm env --use-on-cd --shell zsh)"
 
 # -----------------------------------------------------------------------------
-# 4. Aliases & Functions
+# 5. Aliases & Functions
 # -----------------------------------------------------------------------------
 
 # Modern replacements (eza for ls, ug for grep)
@@ -62,17 +62,9 @@ fi
 # Source custom scripts and external alias files
 [ -f ~/.config/aliases ] && . ~/.config/aliases
 
-if [ -d ~/.bashrc.d ]; then
-  for rc in ~/.bashrc.d/*; do
+if [ -d ~/.zshrc.d ]; then
+  for rc in ~/.zshrc.d/*; do
     [ -f "$rc" ] && . "$rc"
   done
   unset rc
 fi
-
-# -----------------------------------------------------------------------------
-# 5. Prompt Customization (Fallback)
-# -----------------------------------------------------------------------------
-
-# Note: If starship is active (initialized above), it will override this PS1.
-# This serves as a clean backup prompt.
-PS1='\[\e[1;32m\]\u@\h\[\e[m\] \[\e[1;36m\]\w\[\e[m\]\n\[\e[1;32m\]❯\[\e[m\] '
