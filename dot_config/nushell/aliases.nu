@@ -10,8 +10,13 @@ alias ..... = cd ../../../..
 alias g = git
 alias lg = lazygit
 alias sctl = systemctl
-alias cz = chezmoi
 alias vim = nvim
 alias vi = nvim
 
+def --wrapped cz [...rest] {
+    ^chezmoi ...$rest
+}
 
+def nuf [] {
+    ^$"($env.HOME)/.config/personalScripts/update-flake-lock.sh"
+}

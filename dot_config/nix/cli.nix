@@ -3,6 +3,7 @@
   blesh
   bun
   chezmoi
+  codex
   curl
   eza
   fastfetch
