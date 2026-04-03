@@ -20,7 +20,6 @@
   ripgrep
   shellcheck
   starship
-  tailscale
   ugrep
   zimfw
   zoxide
