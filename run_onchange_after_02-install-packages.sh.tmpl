@@ -21,12 +21,20 @@ if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
   . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
 fi
 
+if ! command -v nix >/dev/null 2>&1; then
+  log_message "ERROR: Nix is not installed."
+  exit 1
+fi
+
+# Fresh Nix installs may not enable these features in nix.conf yet.
+NIX_CMD=(nix --extra-experimental-features 'nix-command flakes')
+
 log_message "Installing/Updating Nix packages from flake..."
 
 # Install or upgrade the default package defined in your flake
-if nix profile list | grep -q 'packages.*x86_64-linux.default'; then
+if "${NIX_CMD[@]}" profile list | grep -q 'packages.*x86_64-linux.default'; then
   log_message "Upgrading Nix packages from flake..."
-  if nix profile upgrade --all; then
+  if "${NIX_CMD[@]}" profile upgrade --all; then
     log_message "SUCCESS: Nix packages upgraded successfully."
   else
     log_message "ERROR: Failed to upgrade Nix packages."
@@ -34,7 +42,7 @@ if nix profile list | grep -q 'packages.*x86_64-linux.default'; then
   fi
 else
   log_message "Installing Nix packages from flake for the first time..."
-  if nix profile install ~/.config/nix#default; then
+  if "${NIX_CMD[@]}" profile add ~/.config/nix#default; then
     log_message "SUCCESS: Nix packages installed successfully."
   else
     log_message "ERROR: Failed to install Nix packages."

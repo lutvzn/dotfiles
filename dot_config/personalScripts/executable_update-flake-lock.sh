@@ -21,6 +21,9 @@ if ! command -v nix >/dev/null 2>&1; then
   exit 1
 fi
 
+# Fresh Nix installs may not enable these features in nix.conf yet.
+NIX_CMD=(nix --extra-experimental-features 'nix-command flakes')
+
 if command -v chezmoi >/dev/null 2>&1; then
   CHEZMOI_SOURCE_DIR="$(chezmoi source-path)"
 else
@@ -37,7 +40,7 @@ fi
 cd "$CHEZMOI_SOURCE_DIR" || exit 1
 
 log_message "Updating flake.lock in $FLAKE_DIR..."
-if nix flake update --flake "$FLAKE_DIR"; then
+if "${NIX_CMD[@]}" flake update --flake "$FLAKE_DIR"; then
   log_message "SUCCESS: flake.lock updated successfully."
 else
   log_message "ERROR: Failed to update flake.lock."
