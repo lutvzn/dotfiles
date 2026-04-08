@@ -18,4 +18,4 @@ alias vim='nvim'
 alias qr='qrencode -t ansiutf8'
 alias cz='chezmoi'
 alias nuf='$HOME/.config/personalScripts/update-flake-lock.sh'
-
+alias dctl='sudo -u deploy XDG_RUNTIME_DIR=/run/user/50001 systemctl --user'
