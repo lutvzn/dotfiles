@@ -1,0 +1,147 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+LOG_DIR="${HOME:-/root}/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_onchange_00-create-users.log"
+
+mkdir -p "$LOG_DIR"
+
+log_message() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+home_root="/home"
+if [ -d /var/home ]; then
+  home_root="/var/home"
+fi
+
+ensure_group() {
+  local group_name="$1"
+  local group_id="$2"
+  local current_group
+
+  current_group="$(getent group "$group_name" || true)"
+
+  if [ -z "$current_group" ]; then
+    if getent group "$group_id" >/dev/null 2>&1; then
+      log_message "ERROR: GID $group_id is already in use and group $group_name does not exist."
+      exit 1
+    fi
+
+    log_message "Creating group $group_name with GID $group_id..."
+    if groupadd --gid "$group_id" "$group_name"; then
+      log_message "SUCCESS: Group $group_name created."
+    else
+      log_message "ERROR: Failed to create group $group_name."
+      exit 1
+    fi
+    return
+  fi
+
+  local existing_gid
+  existing_gid="$(echo "$current_group" | cut -d: -f3)"
+  if [ "$existing_gid" != "$group_id" ]; then
+    if getent group "$group_id" >/dev/null 2>&1 && [ "$(getent group "$group_id" | cut -d: -f1)" != "$group_name" ]; then
+      log_message "ERROR: Cannot change $group_name to GID $group_id because it is already used by another group."
+      exit 1
+    fi
+
+    log_message "Updating group $group_name to GID $group_id..."
+    if groupmod --gid "$group_id" "$group_name"; then
+      log_message "SUCCESS: Group $group_name updated."
+    else
+      log_message "ERROR: Failed to update group $group_name."
+      exit 1
+    fi
+  else
+    log_message "INFO: Group $group_name already uses GID $group_id."
+  fi
+}
+
+ensure_user() {
+  local user_name="$1"
+  local user_id="$2"
+  local primary_group="$3"
+  local supplementary_groups="${4:-}"
+  local home_dir="$home_root/$user_name"
+  local current_user
+
+  current_user="$(getent passwd "$user_name" || true)"
+
+  if [ -z "$current_user" ]; then
+    if getent passwd "$user_id" >/dev/null 2>&1; then
+      log_message "ERROR: UID $user_id is already in use and user $user_name does not exist."
+      exit 1
+    fi
+
+    log_message "Creating user $user_name with UID $user_id and home directory $home_dir..."
+    if useradd --uid "$user_id" --gid "$primary_group" --create-home --home-dir "$home_dir" --shell /bin/bash "$user_name"; then
+      log_message "SUCCESS: User $user_name created."
+    else
+      log_message "ERROR: Failed to create user $user_name."
+      exit 1
+    fi
+  else
+    local existing_uid
+    existing_uid="$(echo "$current_user" | cut -d: -f3)"
+    if [ "$existing_uid" != "$user_id" ]; then
+      if getent passwd "$user_id" >/dev/null 2>&1 && [ "$(getent passwd "$user_id" | cut -d: -f1)" != "$user_name" ]; then
+        log_message "ERROR: Cannot change $user_name to UID $user_id because it is already used by another user."
+        exit 1
+      fi
+
+      log_message "Updating user $user_name to UID $user_id..."
+      if usermod --uid "$user_id" "$user_name"; then
+        log_message "SUCCESS: User $user_name UID updated."
+      else
+        log_message "ERROR: Failed to update UID for $user_name."
+        exit 1
+      fi
+    else
+      log_message "INFO: User $user_name already exists with UID $user_id."
+    fi
+
+    if usermod --gid "$primary_group" --home "$home_dir" --shell /bin/bash "$user_name"; then
+      log_message "INFO: User $user_name primary group, shell, and home directory ensured."
+    else
+      log_message "ERROR: Failed to update account settings for $user_name."
+      exit 1
+    fi
+  fi
+
+  if [ ! -d "$home_dir" ]; then
+    log_message "Home directory $home_dir is missing. Creating it..."
+    if mkdir -p "$home_dir"; then
+      chown "$user_name:$user_name" "$home_dir"
+      chmod 700 "$home_dir"
+      log_message "SUCCESS: Home directory $home_dir created."
+    else
+      log_message "ERROR: Failed to create home directory $home_dir."
+      exit 1
+    fi
+  else
+    chown "$user_name:$primary_group" "$home_dir"
+  fi
+
+  chmod 700 "$home_dir"
+
+  if [ -n "$supplementary_groups" ]; then
+    if usermod --append --groups "$supplementary_groups" "$user_name"; then
+      log_message "INFO: User $user_name supplementary groups ensured: $supplementary_groups."
+    else
+      log_message "ERROR: Failed to update supplementary groups for $user_name."
+      exit 1
+    fi
+  fi
+}
+
+if [ "$(id -u)" -ne 0 ]; then
+  log_message "WARNING: User creation requires root privileges. Skipping."
+  exit 0
+fi
+
+ensure_group "lutvzn" "1000"
+ensure_group "deploy" "5001"
+ensure_user "lutvzn" "1000" "lutvzn" "deploy"
+ensure_user "deploy" "5001" "deploy"
+{{ end -}}
