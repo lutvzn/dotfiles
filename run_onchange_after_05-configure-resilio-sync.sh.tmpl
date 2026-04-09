@@ -4,14 +4,31 @@
 # resilio-sync.service hash: {{ include "dot_config/systemd/user/resilio-sync.service.tmpl" | sha256sum }}
 # resilio-sync.conf hash: {{ include "dot_config/resilio-sync/rslsync.conf.tmpl" | sha256sum }}
 
+LOG_DIR="$HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_onchange_after_05-configure-resilio-sync.log"
+RSLSYNC_BIN="$HOME/.nix-profile/bin/rslsync"
+
+# Ensure the log directory exists
+mkdir -p "$LOG_DIR"
+
 log_message() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
 log_message "Configuring resilio-sync user service..."
 
-# Ensure the sync directory exists
-mkdir -p "$HOME/Sync"
+# Ensure the sync and config directories exist
+mkdir -p "$HOME/Sync" "$HOME/.config/resilio-sync"
+
+if ! command -v systemctl >/dev/null 2>&1; then
+  log_message "WARNING: systemctl is not available; skipping resilio-sync service setup."
+  exit 0
+fi
+
+if [ ! -x "$RSLSYNC_BIN" ]; then
+  log_message "WARNING: $RSLSYNC_BIN was not found; install the flake packages before enabling the service."
+  exit 0
+fi
 
 # Reload systemd user daemon
 systemctl --user daemon-reload
