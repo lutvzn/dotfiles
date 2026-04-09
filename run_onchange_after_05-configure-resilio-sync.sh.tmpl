@@ -15,7 +15,40 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
+ensure_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    return
+  fi
+
+  if ! command -v sudo >/dev/null 2>&1; then
+    log_message "ERROR: sudo is required to manage /sync ownership."
+    exit 1
+  fi
+
+  log_message "INFO: Escalating with sudo to manage /sync ownership."
+  exec sudo bash "$0" "$@"
+}
+
 log_message "Configuring resilio-sync user service..."
+
+ensure_root "$@"
+
+if [ ! -d "/sync" ]; then
+  log_message "Creating /sync directory..."
+  if mkdir -p /sync; then
+    log_message "SUCCESS: /sync directory created."
+  else
+    log_message "ERROR: Failed to create /sync directory."
+    exit 1
+  fi
+fi
+
+if chown -R lutvzn:lutvzn /sync; then
+  log_message "SUCCESS: Ownership set on /sync for lutvzn."
+else
+  log_message "ERROR: Failed to set ownership on /sync."
+  exit 1
+fi
 
 # Ensure the sync and config directories exist
 mkdir -p "$HOME/Sync" "$HOME/.config/resilio-sync"
