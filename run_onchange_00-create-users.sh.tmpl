@@ -10,6 +10,20 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
+ensure_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    return
+  fi
+
+  if ! command -v sudo >/dev/null 2>&1; then
+    log_message "ERROR: sudo is required to create users."
+    exit 1
+  fi
+
+  log_message "INFO: Escalating with sudo to create users."
+  exec sudo bash "$0" "$@"
+}
+
 home_root="/home"
 if [ -d /var/home ]; then
   home_root="/var/home"
@@ -135,10 +149,7 @@ ensure_user() {
   fi
 }
 
-if [ "$(id -u)" -ne 0 ]; then
-  log_message "WARNING: User creation requires root privileges. Skipping."
-  exit 0
-fi
+ensure_root "$@"
 
 ensure_group "lutvzn" "1000"
 ensure_group "deploy" "5001"

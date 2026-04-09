@@ -14,6 +14,20 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
+ensure_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    return
+  fi
+
+  if ! command -v sudo >/dev/null 2>&1; then
+    log_message "ERROR: sudo is required to configure rootless Podman prerequisites."
+    exit 1
+  fi
+
+  log_message "INFO: Escalating with sudo to configure Podman prerequisites."
+  exec sudo bash "$0" "$@"
+}
+
 upsert_subid_entry() {
   local file_path="$1"
   local desired_entry="$DEPLOY_USER:$SUBID_RANGE_START:$SUBID_RANGE_COUNT"
@@ -37,10 +51,7 @@ upsert_subid_entry() {
   fi
 }
 
-if [ "$(id -u)" -ne 0 ]; then
-  log_message "WARNING: Podman account setup requires root privileges. Skipping."
-  exit 0
-fi
+ensure_root "$@"
 
 if ! getent passwd "$DEPLOY_USER" >/dev/null 2>&1; then
   log_message "ERROR: User $DEPLOY_USER does not exist. Run run_onchange_00-create-users first."
