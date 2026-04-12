@@ -6,8 +6,14 @@
 # flake.lock hash: {{ include "dot_config/nix/flake.lock" | sha256sum }}
 # cli.nix hash: {{ include "dot_config/nix/cli.nix" | sha256sum }}
 
-LOG_DIR="$HOME/.config/personalScripts/logs"
+LOG_HOME="${ORIG_HOME:-$HOME}"
+LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_02-install-packages.log"
+GLOBAL_PROFILE="/nix/var/nix/profiles/default"
+SOURCE_HOME="${ORIG_HOME:-$HOME}"
+FLAKE_DIR="$SOURCE_HOME/.config/nix"
+FLAKE_REF="$FLAKE_DIR#system-cli"
+PROFILE_ENTRY_NAME="system-cli"
 
 # Ensure the log directory exists
 mkdir -p "$LOG_DIR"
@@ -15,6 +21,22 @@ mkdir -p "$LOG_DIR"
 log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
+
+ensure_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    return
+  fi
+
+  if ! command -v sudo >/dev/null 2>&1; then
+    log_message "ERROR: sudo is required to install system-wide Nix packages."
+    exit 1
+  fi
+
+  log_message "INFO: Escalating with sudo to install system-wide Nix packages."
+  exec sudo ORIG_HOME="$HOME" bash "$0" "$@"
+}
+
+ensure_root "$@"
 
 # Source Nix environment in case it was just installed by the previous script
 if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
@@ -29,20 +51,26 @@ fi
 # Fresh Nix installs may not enable these features in nix.conf yet.
 NIX_CMD=(nix --extra-experimental-features 'nix-command flakes')
 
-log_message "Installing/Updating Nix packages from flake..."
+if [ ! -d "$FLAKE_DIR" ]; then
+  log_message "ERROR: Expected flake directory $FLAKE_DIR was not found."
+  exit 1
+fi
 
-# Install or upgrade the default package defined in your flake
-if "${NIX_CMD[@]}" profile list | grep -q 'packages.*x86_64-linux.default'; then
-  log_message "Upgrading Nix packages from flake..."
-  if "${NIX_CMD[@]}" profile upgrade --all; then
+log_message "Installing/Updating system-wide Nix packages from $FLAKE_REF..."
+
+# Install or upgrade the named package defined in your flake without touching
+# the Determinate-managed Nix entry that already lives in the default profile.
+if "${NIX_CMD[@]}" profile list --profile "$GLOBAL_PROFILE" | grep -q "Name:.*$PROFILE_ENTRY_NAME"; then
+  log_message "Upgrading system-wide Nix packages from flake..."
+  if "${NIX_CMD[@]}" profile upgrade --profile "$GLOBAL_PROFILE" "$PROFILE_ENTRY_NAME"; then
     log_message "SUCCESS: Nix packages upgraded successfully."
   else
     log_message "ERROR: Failed to upgrade Nix packages."
     exit 1
   fi
 else
-  log_message "Installing Nix packages from flake for the first time..."
-  if "${NIX_CMD[@]}" profile add ~/.config/nix#default; then
+  log_message "Installing system-wide Nix packages from flake for the first time..."
+  if "${NIX_CMD[@]}" profile install --profile "$GLOBAL_PROFILE" "$FLAKE_REF"; then
     log_message "SUCCESS: Nix packages installed successfully."
   else
     log_message "ERROR: Failed to install Nix packages."

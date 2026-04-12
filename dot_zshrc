@@ -14,8 +14,8 @@
 # Prepend user bin and Nix directories
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
-if [ -d "$HOME/.nix-profile/bin" ]; then
-  export PATH="$HOME/.nix-profile/bin:$PATH"
+if [ -d "/nix/var/nix/profiles/default/bin" ]; then
+  export PATH="/nix/var/nix/profiles/default/bin:$PATH"
 fi
 
 # Cargo / Rust environment
@@ -26,9 +26,9 @@ fi
 # -----------------------------------------------------------------------------
 
 ZIM_HOME=${ZIM_HOME:-${XDG_CACHE_HOME:-${HOME}/.cache}/zim}
-if [[ -f "$HOME/.nix-profile/zimfw.zsh" ]]; then
+if [[ -f "/nix/var/nix/profiles/default/zimfw.zsh" ]]; then
   if [[ ! -e ${ZIM_HOME}/init.zsh ]]; then
-    source "$HOME/.nix-profile/zimfw.zsh" install
+    source "/nix/var/nix/profiles/default/zimfw.zsh" install
   fi
   source ${ZIM_HOME}/init.zsh
 fi

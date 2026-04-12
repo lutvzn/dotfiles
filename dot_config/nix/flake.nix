@@ -15,12 +15,15 @@
           allowUnfree = true;
         };
       };
-      cliPackages = import ./cli.nix { inherit pkgs; };      in
+      cliPackages = import ./cli.nix { inherit pkgs; };
+      systemCli = pkgs.buildEnv {
+        name = "system-cli";
+        paths = cliPackages;
+      };
+    in
       {
-        packages.default = pkgs.buildEnv {
-          name = "cli";
-          paths = cliPackages;
-        };
+        packages.system-cli = systemCli;
+        packages.default = systemCli;
       }
     );
 }

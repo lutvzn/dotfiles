@@ -6,13 +6,28 @@
 
 LOG_DIR="$HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_after_05-configure-resilio-sync.log"
-RSLSYNC_BIN="$HOME/.nix-profile/bin/rslsync"
+RSLSYNC_BIN=""
 
 # Ensure the log directory exists
 mkdir -p "$LOG_DIR"
 
 log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+resolve_rslsync_bin() {
+  local candidate
+
+  for candidate in \
+    "/nix/var/nix/profiles/default/bin/rslsync" \
+    "$HOME/.nix-profile/bin/rslsync"; do
+    if [ -x "$candidate" ]; then
+      RSLSYNC_BIN="$candidate"
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 run_with_sudo() {
@@ -53,8 +68,8 @@ if ! command -v systemctl >/dev/null 2>&1; then
   exit 0
 fi
 
-if [ ! -x "$RSLSYNC_BIN" ]; then
-  log_message "WARNING: $RSLSYNC_BIN was not found; install the flake packages before enabling the service."
+if ! resolve_rslsync_bin; then
+  log_message "WARNING: rslsync was not found in the global or user Nix profiles; install the flake packages before enabling the service."
   exit 0
 fi
 

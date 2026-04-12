@@ -7,11 +7,11 @@
   curl
   eza
   fastfetch
-  fd
-  fish
+  fd 
   fnm
   fzf
   gh
+  htop
   lazygit
   neovim
   nushell
@@ -23,5 +23,6 @@
   ugrep
   zimfw
   zoxide
+  zsh
   nerd-fonts.fira-code
 ]

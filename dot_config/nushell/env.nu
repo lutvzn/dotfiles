@@ -28,9 +28,9 @@ $env.PATH = (
     ]
 )
 
-let nix_bin = ("~/.nix-profile/bin" | path expand)
-if ($nix_bin | path exists) {
-    $env.PATH = ($env.PATH | split row (char esep) | prepend $nix_bin)
+let global_nix_bin = "/nix/var/nix/profiles/default/bin"
+if ($global_nix_bin | path exists) {
+    $env.PATH = ($env.PATH | split row (char esep) | prepend $global_nix_bin)
 }
 
 $env.PATH = ($env.PATH | uniq)

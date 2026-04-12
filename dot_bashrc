@@ -11,7 +11,7 @@
 [[ $- != *i* ]] && return
 
 # Initialize blesh (should be early)
-[ -f "$HOME/.nix-profile/share/blesh/ble.sh" ] && . "$HOME/.nix-profile/share/blesh/ble.sh"
+[ -f "/nix/var/nix/profiles/default/share/blesh/ble.sh" ] && . "/nix/var/nix/profiles/default/share/blesh/ble.sh"
 
 # -----------------------------------------------------------------------------
 # 2. Environment & PATH
@@ -20,8 +20,8 @@
 # Prepend user bin and Nix directories
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
-if [ -d "$HOME/.nix-profile/bin" ]; then
-  export PATH="$HOME/.nix-profile/bin:$PATH"
+if [ -d "/nix/var/nix/profiles/default/bin" ]; then
+  export PATH="/nix/var/nix/profiles/default/bin:$PATH"
 fi
 
 # Cargo / Rust environment
