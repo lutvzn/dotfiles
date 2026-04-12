@@ -29,6 +29,12 @@ GIT_EMAIL=$(reverse_string "$EMAIL_REV")
 echo "Configuring git..."
 git config --global user.name "$GIT_USER"
 git config --global user.email "$GIT_EMAIL"
+git config --global --unset-all credential.https://github.com.helper || true
+git config --global --add credential.https://github.com.helper ""
+git config --global --add credential.https://github.com.helper "!/nix/var/nix/profiles/default/bin/gh auth git-credential"
+git config --global --unset-all credential.https://gist.github.com.helper || true
+git config --global --add credential.https://gist.github.com.helper ""
+git config --global --add credential.https://gist.github.com.helper "!/nix/var/nix/profiles/default/bin/gh auth git-credential"
 
 echo "Git configured."
 {{ end -}}
