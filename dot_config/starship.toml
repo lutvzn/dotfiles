@@ -1,4 +1,4 @@
-format = """$shell$all"""
+format = """$all"""
 
 [shell]
 disabled = false
@@ -8,3 +8,9 @@ show_always = true
 
 [hostname]
 ssh_only = false
+ssh_symbol = "ssh:"
+format = "on [$ssh_symbol$hostname]($style) "
+
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[>](bold red)"

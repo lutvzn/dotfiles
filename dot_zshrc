@@ -53,6 +53,14 @@ PROMPT='%F{green}%n@%m%f %F{cyan}%~%f
 [ "$(command -v fzf)" ] && source <(fzf --zsh)
 [ "$(command -v fnm)" ] && eval "$(fnm env --use-on-cd --shell zsh)"
 
+# Keep standard zsh completion on Tab. fzf's init can override it.
+bindkey '^I' expand-or-complete
+bindkey -M viins '^I' expand-or-complete
+
+# Preserve fzf completion on Ctrl-F instead of Tab.
+bindkey '^F' fzf-completion
+bindkey -M viins '^F' fzf-completion
+
 # -----------------------------------------------------------------------------
 # 6. Aliases & Functions
 # -----------------------------------------------------------------------------

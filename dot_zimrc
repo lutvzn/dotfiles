@@ -7,8 +7,5 @@
 # Fish-like syntax highlighting
 zmodule zdharma-continuum/fast-syntax-highlighting
 
-# Fish-like autosuggestions
-zmodule zsh-users/zsh-autosuggestions
-
 # Additional completions and menu selection
 zmodule completion
