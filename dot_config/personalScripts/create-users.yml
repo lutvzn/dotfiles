@@ -1,0 +1,70 @@
+---
+- name: Ensure local users and groups exist
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+
+  vars:
+    managed_groups:
+      - name: lutvzn
+        gid: 1000
+      - name: deploy
+        gid: 5001
+
+  pre_tasks:
+    - name: Check whether /var/home exists
+      ansible.builtin.stat:
+        path: /var/home
+      register: var_home
+
+    - name: Set the base home directory
+      ansible.builtin.set_fact:
+        home_root: "{{ '/var/home' if var_home.stat.exists else '/home' }}"
+
+    - name: Define managed users
+      ansible.builtin.set_fact:
+        managed_users:
+          - name: lutvzn
+            uid: 1000
+            group: lutvzn
+            groups:
+              - deploy
+            home: "{{ home_root }}/lutvzn"
+            shell: /bin/bash
+          - name: deploy
+            uid: 5001
+            group: deploy
+            groups: []
+            home: "{{ home_root }}/deploy"
+            shell: /bin/bash
+
+  tasks:
+    - name: Ensure groups exist
+      ansible.builtin.group:
+        name: "{{ item.name }}"
+        gid: "{{ item.gid }}"
+        state: present
+      loop: "{{ managed_groups }}"
+
+    - name: Ensure users exist
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        uid: "{{ item.uid }}"
+        group: "{{ item.group }}"
+        groups: "{{ item.groups | join(',') }}"
+        append: true
+        create_home: true
+        home: "{{ item.home }}"
+        shell: "{{ item.shell }}"
+        state: present
+      loop: "{{ managed_users }}"
+
+    - name: Ensure user home directories have the correct ownership and mode
+      ansible.builtin.file:
+        path: "{{ item.home }}"
+        state: directory
+        owner: "{{ item.name }}"
+        group: "{{ item.group }}"
+        mode: "0700"
+      loop: "{{ managed_users }}"
