@@ -1,0 +1,65 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+LOG_HOME="${ORIG_HOME:-$HOME}"
+LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_onchange_02-set-default-shell.log"
+TARGET_USER="lutvzn"
+TARGET_SHELL="/nix/var/nix/profiles/default/bin/zsh"
+
+mkdir -p "$LOG_DIR"
+
+log_message() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+ensure_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    return
+  fi
+
+  if ! command -v sudo >/dev/null 2>&1; then
+    log_message "ERROR: sudo is required to change the default shell."
+    exit 1
+  fi
+
+  log_message "INFO: Escalating with sudo to change the default shell."
+  exec sudo ORIG_HOME="$HOME" bash "$0" "$@"
+}
+
+if [ ! -x "$TARGET_SHELL" ]; then
+  log_message "ERROR: Target shell $TARGET_SHELL is missing or not executable."
+  exit 1
+fi
+
+ensure_root "$@"
+
+current_user="$(getent passwd "$TARGET_USER" || true)"
+if [ -z "$current_user" ]; then
+  log_message "ERROR: User $TARGET_USER does not exist."
+  exit 1
+fi
+
+current_shell="$(echo "$current_user" | cut -d: -f7)"
+if [ "$current_shell" = "$TARGET_SHELL" ]; then
+  log_message "INFO: User $TARGET_USER already uses $TARGET_SHELL."
+  exit 0
+fi
+
+usermod_bin="$(command -v usermod || true)"
+if [ -z "$usermod_bin" ] && [ -x /usr/sbin/usermod ]; then
+  usermod_bin="/usr/sbin/usermod"
+fi
+
+if [ -z "$usermod_bin" ]; then
+  log_message "ERROR: Could not find usermod."
+  exit 1
+fi
+
+if "$usermod_bin" --shell "$TARGET_SHELL" "$TARGET_USER"; then
+  log_message "SUCCESS: Default shell for $TARGET_USER updated to $TARGET_SHELL."
+else
+  log_message "ERROR: Failed to update default shell for $TARGET_USER."
+  exit 1
+fi
+{{ end -}}
