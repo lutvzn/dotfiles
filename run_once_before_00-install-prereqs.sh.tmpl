@@ -3,8 +3,9 @@
 
 LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
-LOG_FILE="$LOG_DIR/run_once_before_00-install-ansible.log"
-REQUIRED_PACKAGES=(ansible zsh git)
+LOG_FILE="$LOG_DIR/run_once_before_00-install-prereqs.log"
+REQUIRED_PACKAGES=(ansible zsh git curl)
+NIX_PROFILE_SCRIPT="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
 
 mkdir -p "$LOG_DIR"
 
@@ -18,11 +19,11 @@ ensure_root() {
   fi
 
   if ! command -v sudo >/dev/null 2>&1; then
-    log_message "ERROR: sudo is required to install Ansible."
+    log_message "ERROR: sudo is required to install prerequisites."
     exit 1
   fi
 
-  log_message "INFO: Escalating with sudo to install Ansible."
+  log_message "INFO: Escalating with sudo to install prerequisites."
   exec sudo ORIG_HOME="$HOME" bash "$0" "$@"
 }
 
@@ -122,11 +123,45 @@ have_required_packages() {
   return "$missing"
 }
 
+source_nix_environment() {
+  if [ -e "$NIX_PROFILE_SCRIPT" ]; then
+    # shellcheck disable=SC1090
+    . "$NIX_PROFILE_SCRIPT"
+  fi
+}
+
+have_nix() {
+  command -v nix >/dev/null 2>&1 || [ -x /nix/var/nix/profiles/default/bin/nix ]
+}
+
+install_nix() {
+  if have_nix; then
+    log_message "INFO: Nix is already installed."
+    source_nix_environment
+    return
+  fi
+
+  log_message "INFO: Installing Nix with the Determinate Systems installer."
+
+  if curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm; then
+    source_nix_environment
+    if have_nix; then
+      log_message "SUCCESS: Nix installation completed successfully."
+    else
+      log_message "ERROR: Nix installer finished but nix is still unavailable."
+      exit 1
+    fi
+  else
+    log_message "ERROR: Nix installation failed."
+    exit 1
+  fi
+}
+
 ensure_root "$@"
 detect_os
 
-if have_required_packages; then
-  log_message "INFO: Required commands are already present."
+if have_required_packages && have_nix; then
+  log_message "INFO: Required commands and Nix are already present."
   exit 0
 fi
 
@@ -171,10 +206,14 @@ case "$DISTRO_ID" in
     ;;
 esac
 
-if ! have_required_packages; then
+install_nix
+
+if have_required_packages && have_nix; then
   log_message "SUCCESS: ansible is available at $(command -v ansible)."
   log_message "SUCCESS: zsh is available at $(command -v zsh)."
   log_message "SUCCESS: git is available at $(command -v git)."
+  log_message "SUCCESS: curl is available at $(command -v curl)."
+  log_message "SUCCESS: nix is available at $(command -v nix || echo /nix/var/nix/profiles/default/bin/nix)."
 else
   log_message "ERROR: Installation completed but one or more required commands are still unavailable in PATH."
   exit 1
