@@ -1,6 +1,8 @@
 {{ if eq .chezmoi.os "linux" -}}
 #!/bin/bash
 
+# create-users.yml hash: {{ include "dot_config/personalScripts/create-users.yml" | sha256sum }}
+
 LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_00-create-users.log"
@@ -51,9 +53,9 @@ fi
 
 log_message "INFO: Applying user creation playbook $PLAYBOOK_PATH."
 if ansible-playbook "$PLAYBOOK_PATH"; then
-  log_message "SUCCESS: User creation playbook applied successfully."
+  log_message "SUCCESS: User bootstrap playbook applied successfully."
 else
-  log_message "ERROR: Failed to apply user creation playbook."
+  log_message "ERROR: Failed to apply user bootstrap playbook."
   exit 1
 fi
 {{ end -}}

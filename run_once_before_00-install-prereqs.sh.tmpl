@@ -1,0 +1,182 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+LOG_HOME="${ORIG_HOME:-$HOME}"
+LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_once_before_00-install-ansible.log"
+REQUIRED_PACKAGES=(ansible zsh git)
+
+mkdir -p "$LOG_DIR"
+
+log_message() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+ensure_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    return
+  fi
+
+  if ! command -v sudo >/dev/null 2>&1; then
+    log_message "ERROR: sudo is required to install Ansible."
+    exit 1
+  fi
+
+  log_message "INFO: Escalating with sudo to install Ansible."
+  exec sudo ORIG_HOME="$HOME" bash "$0" "$@"
+}
+
+detect_os() {
+  if [ ! -r /etc/os-release ]; then
+    log_message "ERROR: /etc/os-release is not available. Cannot detect the operating system."
+    exit 1
+  fi
+
+  . /etc/os-release
+  DISTRO_ID="${ID:-}"
+  DISTRO_LIKE="${ID_LIKE:-}"
+}
+
+install_with_apt() {
+  log_message "INFO: Installing required packages with apt: ${REQUIRED_PACKAGES[*]}."
+
+  if ! apt-get update; then
+    log_message "ERROR: apt-get update failed."
+    exit 1
+  fi
+
+  if apt-get install -y "${REQUIRED_PACKAGES[@]}"; then
+    log_message "SUCCESS: Required packages installed with apt."
+  else
+    log_message "ERROR: Failed to install required packages with apt."
+    exit 1
+  fi
+}
+
+install_with_dnf() {
+  log_message "INFO: Installing required packages with dnf: ${REQUIRED_PACKAGES[*]}."
+
+  if dnf install -y "${REQUIRED_PACKAGES[@]}"; then
+    log_message "SUCCESS: Required packages installed with dnf."
+  else
+    log_message "ERROR: Failed to install required packages with dnf."
+    exit 1
+  fi
+}
+
+install_with_zypper() {
+  log_message "INFO: Installing required packages with zypper: ${REQUIRED_PACKAGES[*]}."
+
+  if zypper --non-interactive refresh && zypper --non-interactive install --no-confirm "${REQUIRED_PACKAGES[@]}"; then
+    log_message "SUCCESS: Required packages installed with zypper."
+  else
+    log_message "ERROR: Failed to install required packages with zypper."
+    exit 1
+  fi
+}
+
+install_with_pacman() {
+  log_message "INFO: Installing required packages with pacman: ${REQUIRED_PACKAGES[*]}."
+
+  if pacman -Sy --noconfirm "${REQUIRED_PACKAGES[@]}"; then
+    log_message "SUCCESS: Required packages installed with pacman."
+  else
+    log_message "ERROR: Failed to install required packages with pacman."
+    exit 1
+  fi
+}
+
+install_with_xbps() {
+  log_message "INFO: Installing required packages with xbps-install: ${REQUIRED_PACKAGES[*]}."
+
+  if xbps-install -Sy "${REQUIRED_PACKAGES[@]}"; then
+    log_message "SUCCESS: Required packages installed with xbps-install."
+  else
+    log_message "ERROR: Failed to install required packages with xbps-install."
+    exit 1
+  fi
+}
+
+install_with_apk() {
+  log_message "INFO: Installing required packages with apk: ${REQUIRED_PACKAGES[*]}."
+
+  if apk add "${REQUIRED_PACKAGES[@]}"; then
+    log_message "SUCCESS: Required packages installed with apk."
+  else
+    log_message "ERROR: Failed to install required packages with apk."
+    exit 1
+  fi
+}
+
+have_required_packages() {
+  local missing=0
+  local package
+
+  for package in "${REQUIRED_PACKAGES[@]}"; do
+    if ! command -v "$package" >/dev/null 2>&1; then
+      log_message "INFO: Missing required command: $package."
+      missing=1
+    fi
+  done
+
+  return "$missing"
+}
+
+ensure_root "$@"
+detect_os
+
+if have_required_packages; then
+  log_message "INFO: Required commands are already present."
+  exit 0
+fi
+
+case "$DISTRO_ID" in
+  ubuntu)
+    install_with_apt
+    ;;
+  fedora)
+    install_with_dnf
+    ;;
+  arch|artix)
+    install_with_pacman
+    ;;
+  void)
+    install_with_xbps
+    ;;
+  alpine)
+    install_with_apk
+    ;;
+  opensuse*|sles)
+    install_with_zypper
+    ;;
+  *)
+    case " $DISTRO_LIKE " in
+      *" debian "*)
+        install_with_apt
+        ;;
+      *" arch "*)
+        install_with_pacman
+        ;;
+      *" fedora "*|*" rhel "*)
+        install_with_dnf
+        ;;
+      *" suse "*)
+        install_with_zypper
+        ;;
+      *)
+        log_message "ERROR: Unsupported distribution ID '$DISTRO_ID' (ID_LIKE='$DISTRO_LIKE')."
+        exit 1
+        ;;
+    esac
+    ;;
+esac
+
+if ! have_required_packages; then
+  log_message "SUCCESS: ansible is available at $(command -v ansible)."
+  log_message "SUCCESS: zsh is available at $(command -v zsh)."
+  log_message "SUCCESS: git is available at $(command -v git)."
+else
+  log_message "ERROR: Installation completed but one or more required commands are still unavailable in PATH."
+  exit 1
+fi
+{{ end -}}

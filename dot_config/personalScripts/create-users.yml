@@ -1,5 +1,5 @@
 ---
-- name: Ensure local users and groups exist
+- name: Ensure local users and rootless Podman prerequisites exist
   hosts: localhost
   connection: local
   become: true
@@ -38,6 +38,10 @@
             groups: []
             home: "{{ home_root }}/deploy"
             shell: /bin/bash
+        deploy_podman_dirs:
+          - "{{ home_root }}/deploy/.config/containers"
+          - "{{ home_root }}/deploy/.local/share/containers"
+          - "{{ home_root }}/deploy/.config/systemd/user"
 
   tasks:
     - name: Ensure groups exist
@@ -68,3 +72,45 @@
         group: "{{ item.group }}"
         mode: "0700"
       loop: "{{ managed_users }}"
+
+    - name: Ensure subordinate UID mapping for deploy exists
+      ansible.builtin.lineinfile:
+        path: /etc/subuid
+        regexp: '^deploy:'
+        line: 'deploy:165536:65536'
+        create: true
+        mode: "0644"
+
+    - name: Ensure subordinate GID mapping for deploy exists
+      ansible.builtin.lineinfile:
+        path: /etc/subgid
+        regexp: '^deploy:'
+        line: 'deploy:165536:65536'
+        create: true
+        mode: "0644"
+
+    - name: Check whether loginctl is available
+      ansible.builtin.command: loginctl --version
+      register: loginctl_check
+      changed_when: false
+      failed_when: false
+
+    - name: Check whether linger is already enabled for deploy
+      ansible.builtin.stat:
+        path: /var/lib/systemd/linger/deploy
+      register: deploy_linger
+
+    - name: Enable lingering for deploy
+      ansible.builtin.command: loginctl enable-linger deploy
+      when:
+        - loginctl_check.rc == 0
+        - not deploy_linger.stat.exists
+
+    - name: Ensure deploy Podman directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: deploy
+        group: deploy
+        mode: "0755"
+      loop: "{{ deploy_podman_dirs }}"
