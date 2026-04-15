@@ -17,6 +17,13 @@ properties:
         id: Oven-sh.Bun
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Codex
+      directives:
+        description: Install Codex CLI
+      settings:
+        id: OpenAI.Codex
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Chezmoi
       directives:
         description: Install Chezmoi
@@ -36,6 +43,20 @@ properties:
         description: Install fd
       settings:
         id: sharkdp.fd
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Eza
+      directives:
+        description: Install eza
+      settings:
+        id: eza-community.eza
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Fastfetch
+      directives:
+        description: Install Fastfetch
+      settings:
+        id: Fastfetch-cli.Fastfetch
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Fnm
@@ -80,6 +101,13 @@ properties:
         id: Neovim.Neovim
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Nushell
+      directives:
+        description: Install Nushell
+      settings:
+        id: Nushell.Nushell
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Python
       directives:
         description: Install Python 3.14
@@ -108,10 +136,16 @@ properties:
         id: Starship.Starship
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Ugrep
+      directives:
+        description: Install ugrep
+      settings:
+        id: Genivia.ugrep
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Zoxide
       directives:
         description: Install Zoxide
       settings:
         id: ajeetdsouza.zoxide
         source: winget
-
