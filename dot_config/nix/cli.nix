@@ -2,9 +2,7 @@
   atuin
   blesh
   bun
-  chezmoi
   codex
-  curl
   eza
   fastfetch
   fd 
@@ -23,6 +21,5 @@
   ugrep
   zimfw
   zoxide
-  zsh
   nerd-fonts.fira-code
 ]

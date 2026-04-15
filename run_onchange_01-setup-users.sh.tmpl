@@ -1,11 +1,11 @@
 {{ if eq .chezmoi.os "linux" -}}
 #!/bin/bash
 
-# create-users.yml hash: {{ include "dot_config/personalScripts/create-users.yml" | sha256sum }}
+# setup-users.yml hash: {{ include "dot_config/personalScripts/setup-users.yml" | sha256sum }}
 
 LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
-LOG_FILE="$LOG_DIR/run_onchange_00-create-users.log"
+LOG_FILE="$LOG_DIR/run_onchange_00-setup-users.log"
 DEFAULT_CHEZMOI_SOURCE_DIR="$LOG_HOME/.local/share/chezmoi"
 
 mkdir -p "$LOG_DIR"
@@ -44,7 +44,7 @@ if ! command -v ansible-playbook >/dev/null 2>&1; then
 fi
 
 CHEZMOI_SOURCE_DIR="$(resolve_chezmoi_source_dir)"
-PLAYBOOK_PATH="$CHEZMOI_SOURCE_DIR/dot_config/personalScripts/create-users.yml"
+PLAYBOOK_PATH="$CHEZMOI_SOURCE_DIR/dot_config/personalScripts/setup-users.yml"
 
 if [ ! -f "$PLAYBOOK_PATH" ]; then
   log_message "ERROR: Ansible playbook not found at $PLAYBOOK_PATH."

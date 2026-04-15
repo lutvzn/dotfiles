@@ -11,6 +11,7 @@
         gid: 1000
       - name: deploy
         gid: 5001
+    lutvzn_git_config_path: "{{ home_root }}/lutvzn/.gitconfig"
 
   pre_tasks:
     - name: Check whether /var/home exists
@@ -72,6 +73,34 @@
         group: "{{ item.group }}"
         mode: "0700"
       loop: "{{ managed_users }}"
+
+    - name: Ensure Git config exists for lutvzn
+      ansible.builtin.file:
+        path: "{{ lutvzn_git_config_path }}"
+        state: touch
+        owner: lutvzn
+        group: lutvzn
+        mode: "0600"
+
+    - name: Set Git username for lutvzn
+      ansible.builtin.ini_file:
+        path: "{{ lutvzn_git_config_path }}"
+        section: user
+        option: name
+        value: lutvzn
+        owner: lutvzn
+        group: lutvzn
+        mode: "0600"
+
+    - name: Set Git email for lutvzn
+      ansible.builtin.ini_file:
+        path: "{{ lutvzn_git_config_path }}"
+        section: user
+        option: email
+        value: 106083845+lutvzn@users.noreply.github.com
+        owner: lutvzn
+        group: lutvzn
+        mode: "0600"
 
     - name: Ensure subordinate UID mapping for deploy exists
       ansible.builtin.lineinfile:

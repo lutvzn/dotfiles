@@ -3,32 +3,7 @@
 
 # run_onchange_after_04-configure-git.sh.tmpl hash: {{ include "dot_config/nix/cli.nix" | sha256sum }}
 
-# Function to reverse a string in pure Bash
-reverse_string() {
-    local input="$1"
-    local len=${#input}
-    local reversed=""
-    for (( i=$len-1; i>=0; i-- )); do
-        reversed="${reversed}${input:$i:1}"
-    done
-    echo "$reversed"
-}
-
-# Obfuscated values (Base64 of Reversed Strings)
-ENC_USER_REV="bnp2dHVs"
-ENC_EMAIL_REV="bW9jLmJ1aHRpZy55bHBlcm9uLnNyZXN1QG56dnR1bCs1NDgzODA2MDE="
-
-# Decode (gets reversed string)
-USER_REV=$(echo "$ENC_USER_REV" | base64 -d)
-EMAIL_REV=$(echo "$ENC_EMAIL_REV" | base64 -d)
-
-# Reverse back to normal using Bash
-GIT_USER=$(reverse_string "$USER_REV")
-GIT_EMAIL=$(reverse_string "$EMAIL_REV")
-
 echo "Configuring git..."
-git config --global user.name "$GIT_USER"
-git config --global user.email "$GIT_EMAIL"
 git config --global --unset-all credential.https://github.com.helper || true
 git config --global --add credential.https://github.com.helper ""
 git config --global --add credential.https://github.com.helper "!/nix/var/nix/profiles/default/bin/gh auth git-credential"
