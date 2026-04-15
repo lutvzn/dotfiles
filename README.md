@@ -10,6 +10,13 @@ My personal dotfiles, managed with [chezmoi](https://www.chezmoi.io/).
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply lutvzn
 ```
 
+### Windows One-Liner (PowerShell)
+
+```powershell
+winget install twpayne.chezmoi; $env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned; chezmoi init --apply lutvzn
+```
+
 Manual steps:
 
 1. Install `chezmoi` using your package manager or the install script:
