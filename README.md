@@ -4,13 +4,13 @@ My personal dotfiles, managed with [chezmoi](https://www.chezmoi.io/).
 
 ## Quick Start
 
-### One-line binary install, init, and apply
+### Linux / macOS
 
 ```sh
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply lutvzn
 ```
 
-### Manual installation and initialization
+Manual steps:
 
 1. Install `chezmoi` using your package manager or the install script:
    ```sh
@@ -49,7 +49,12 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply lutvzn
    chezmoi diff
    ```
 
-4. Apply the managed files:
+4. If `chezmoi apply` fails with `execução de scripts foi desabilitada neste sistema`, allow local scripts for your user:
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+   ```
+
+5. Apply the managed files:
    ```powershell
    chezmoi apply -v
    ```
@@ -94,6 +99,7 @@ On Windows, run the same commands from PowerShell:
 ```powershell
 chezmoi init lutvzn
 chezmoi diff
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 chezmoi apply -v
 ```
 
