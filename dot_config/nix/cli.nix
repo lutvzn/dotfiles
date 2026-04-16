@@ -2,7 +2,6 @@
   atuin
   blesh
   bun
-  codex
   eza
   fastfetch
   fd 

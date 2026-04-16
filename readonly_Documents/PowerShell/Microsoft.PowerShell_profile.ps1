@@ -1,5 +1,15 @@
 fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
 
+function .. { Set-Location .. }
+function ... { Set-Location ../.. }
+function .... { Set-Location ../../.. }
+function ..... { Set-Location ../../../.. }
+
+Set-Alias -Name g -Value git
+Set-Alias -Name lg -Value lazygit
+Set-Alias -Name vim -Value nvim
+Set-Alias -Name cz -Value chezmoi
+
 if ((Get-Module -ListAvailable -Name PSReadLine) -and -not (Get-Module PSReadLine)) {
     Import-Module PSReadLine
 }
