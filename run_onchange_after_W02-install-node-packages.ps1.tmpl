@@ -1,0 +1,72 @@
+{{ if eq .chezmoi.os "windows" -}}
+# npm global packages hash: {{ include "dot_config/packages/npm-global.txt" | sha256sum }}
+
+$logDir = Join-Path $HOME ".config\personalScripts\logs"
+$logFile = Join-Path $logDir "run_onchange_after_W02-install-node-packages.log"
+$packagesFile = Join-Path $HOME ".config\packages\npm-global.txt"
+
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+function Write-Log {
+    param(
+        [string]$Message
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $entry = "$timestamp - $Message"
+    Write-Host $entry
+    Add-Content -Path $logFile -Value $entry
+}
+
+if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
+    Write-Log "ERROR: fnm is not installed or not available in PATH."
+    exit 1
+}
+
+if (-not (Test-Path $packagesFile)) {
+    Write-Log "ERROR: Package list not found at $packagesFile."
+    exit 1
+}
+
+Write-Log "Configuring fnm environment..."
+fnm env --shell powershell | Out-String | Invoke-Expression
+
+Write-Log "Installing Node.js 24 with fnm..."
+fnm install 24
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to install Node.js 24."
+    exit 1
+}
+
+Write-Log "Setting Node.js 24 as the default version..."
+fnm default 24
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to set Node.js 24 as the default version."
+    exit 1
+}
+
+Write-Log "Activating Node.js 24..."
+fnm use 24 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to activate Node.js 24."
+    exit 1
+}
+
+$packages = Get-Content -Path $packagesFile |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -and -not $_.StartsWith("#") }
+
+if ($packages.Count -eq 0) {
+    Write-Log "INFO: No npm global packages were listed in $packagesFile."
+    exit 0
+}
+
+Write-Log "Installing npm global packages from $packagesFile..."
+npm install --global $packages
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to install npm global packages."
+    exit 1
+}
+
+Write-Log "SUCCESS: Node.js 24 and npm global packages are installed."
+{{ end -}}

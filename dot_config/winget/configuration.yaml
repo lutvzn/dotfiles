@@ -17,13 +17,6 @@ properties:
         id: Oven-sh.Bun
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
-      id: Codex
-      directives:
-        description: Install Codex CLI
-      settings:
-        id: OpenAI.Codex
-        source: winget
-    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Chezmoi
       directives:
         description: Install Chezmoi
