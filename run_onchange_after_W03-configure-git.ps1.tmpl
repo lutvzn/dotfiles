@@ -1,0 +1,71 @@
+{{ if eq .chezmoi.os "windows" -}}
+# run_onchange_after_W03-configure-git.ps1.tmpl hash: {{ include "dot_config/personalScripts/setup-users.yml" | sha256sum }}
+
+$logDir = Join-Path $HOME ".config\personalScripts\logs"
+$logFile = Join-Path $logDir "run_onchange_after_W03-configure-git.log"
+
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+function Write-Log {
+    param(
+        [string]$Message
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $entry = "$timestamp - $Message"
+    Write-Host $entry
+    Add-Content -Path $logFile -Value $entry
+}
+
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Log "ERROR: git is not installed or not available in PATH."
+    exit 1
+}
+
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    Write-Log "ERROR: gh is not installed or not available in PATH."
+    exit 1
+}
+
+Write-Log "Configuring git identity..."
+git config --global user.name "lutvzn"
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to set git user.name."
+    exit 1
+}
+
+git config --global user.email "106083845+lutvzn@users.noreply.github.com"
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to set git user.email."
+    exit 1
+}
+
+Write-Log "Configuring GitHub credential helpers..."
+git config --global --unset-all credential.https://github.com.helper 2>$null
+git config --global --add credential.https://github.com.helper ""
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to add github.com credential reset helper."
+    exit 1
+}
+
+git config --global --add credential.https://github.com.helper "!gh auth git-credential"
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to add github.com gh credential helper."
+    exit 1
+}
+
+git config --global --unset-all credential.https://gist.github.com.helper 2>$null
+git config --global --add credential.https://gist.github.com.helper ""
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to add gist.github.com credential reset helper."
+    exit 1
+}
+
+git config --global --add credential.https://gist.github.com.helper "!gh auth git-credential"
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to add gist.github.com gh credential helper."
+    exit 1
+}
+
+Write-Log "SUCCESS: Git is configured for Windows."
+{{ end -}}

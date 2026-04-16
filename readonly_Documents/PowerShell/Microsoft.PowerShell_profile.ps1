@@ -1,0 +1,37 @@
+fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
+
+if ((Get-Module -ListAvailable -Name PSReadLine) -and -not (Get-Module PSReadLine)) {
+    Import-Module PSReadLine
+}
+
+if ((Get-Command atuin -ErrorAction SilentlyContinue) -and (Get-Module PSReadLine)) {
+    atuin init powershell | Out-String | Invoke-Expression
+}
+
+if (Get-Command starship -ErrorAction SilentlyContinue) {
+    Invoke-Expression (&starship init powershell)
+}
+
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+    Invoke-Expression (& { (zoxide init powershell | Out-String) })
+}
+
+# fzf.exe on Windows does not expose a native PowerShell init flag.
+
+if (Get-Command ugrep -ErrorAction SilentlyContinue) {
+    function grep {
+        & ugrep -G -Y -. --sort @args
+    }
+
+    function egrep {
+        & ugrep -E -Y -. --sort @args
+    }
+
+    function fgrep {
+        & ugrep -F -Y -. --sort @args
+    }
+
+    function zgrep {
+        & ugrep -z -G -Y -. --sort @args
+    }
+}
