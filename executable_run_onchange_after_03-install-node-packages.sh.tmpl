@@ -16,8 +16,12 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
+log_message "INFO: Starting run_onchange_after_03-install-node-packages."
+log_message "INFO: Using package list at $PACKAGES_FILE."
+
 if [ -e "$NIX_PROFILE_SCRIPT" ]; then
   # shellcheck disable=SC1090
+  log_message "INFO: Sourcing Nix profile script from $NIX_PROFILE_SCRIPT."
   . "$NIX_PROFILE_SCRIPT"
 fi
 
@@ -25,6 +29,8 @@ if ! command -v fnm >/dev/null 2>&1; then
   log_message "ERROR: fnm is not installed or not available in PATH."
   exit 1
 fi
+
+log_message "INFO: fnm found at $(command -v fnm)."
 
 if [ ! -f "$PACKAGES_FILE" ]; then
   log_message "ERROR: Package list not found at $PACKAGES_FILE."
@@ -52,6 +58,13 @@ if ! fnm use "$NODE_VERSION" >/dev/null; then
   exit 1
 fi
 
+if ! command -v npm >/dev/null 2>&1; then
+  log_message "ERROR: npm is not available in PATH after activating Node.js $NODE_VERSION."
+  exit 1
+fi
+
+log_message "INFO: npm found at $(command -v npm)."
+
 mapfile -t packages < <(grep -vE '^\s*(#|$)' "$PACKAGES_FILE")
 
 if [ "${#packages[@]}" -eq 0 ]; then
@@ -59,6 +72,7 @@ if [ "${#packages[@]}" -eq 0 ]; then
   exit 0
 fi
 
+log_message "INFO: npm global packages to install: ${packages[*]}."
 log_message "Installing npm global packages from $PACKAGES_FILE..."
 if ! npm install --global "${packages[@]}"; then
   log_message "ERROR: Failed to install npm global packages."
