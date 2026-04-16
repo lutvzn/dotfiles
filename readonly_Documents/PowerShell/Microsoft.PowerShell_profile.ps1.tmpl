@@ -1,3 +1,4 @@
+{{ if eq .chezmoi.os "windows" -}}
 fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
 
 function .. { Set-Location .. }
@@ -45,3 +46,4 @@ if (Get-Command ugrep -ErrorAction SilentlyContinue) {
         & ugrep -z -G -Y -. --sort @args
     }
 }
+{{ end -}}
