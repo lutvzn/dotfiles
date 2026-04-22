@@ -17,6 +17,6 @@ def --wrapped cz [...rest] {
     ^chezmoi ...$rest
 }
 
-def nuf [] {
-    ^$"($env.HOME)/.config/personalScripts/update-flake-lock.sh"
+def bub [] {
+    ^brew bundle --file $"($env.HOME)/.config/homebrew/Brewfile" --no-lock
 }

@@ -7,7 +7,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory={{ .chezmoi.homeDir }}
-ExecStart=/nix/var/nix/profiles/default/bin/rslsync --nodaemon --config {{ .chezmoi.homeDir }}/.config/resilio-sync/rslsync.conf
+ExecStart=/bin/bash -lc 'exec "$(command -v rslsync)" --nodaemon --config {{ .chezmoi.homeDir }}/.config/resilio-sync/rslsync.conf'
 Restart=on-failure
 RestartSec=5
 

@@ -1,0 +1,25 @@
+# Core CLI toolset managed by Homebrew.
+
+tap "homebrew/core"
+
+brew "ansible"
+brew "atuin"
+brew "bun"
+brew "eza"
+brew "fastfetch"
+brew "fd"
+brew "fnm"
+brew "fzf"
+brew "gh"
+brew "htop"
+brew "lazygit"
+brew "neovim"
+brew "nushell"
+brew "qrencode"
+brew "ripgrep"
+brew "shellcheck"
+brew "starship"
+brew "ugrep"
+brew "zoxide"
+
+# Install rslsync separately if you want the Resilio Sync user service enabled.

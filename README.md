@@ -2,6 +2,8 @@
 
 My personal dotfiles, managed with [chezmoi](https://www.chezmoi.io/).
 
+On Linux, CLI packages are installed from `~/.config/homebrew/Brewfile` via Homebrew during `chezmoi apply`.
+
 ## Quick Start
 
 ### Linux / macOS

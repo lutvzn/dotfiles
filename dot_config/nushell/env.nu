@@ -17,20 +17,22 @@
 # You can remove these comments if you want or leave
 # them for future reference.
 
-# Prepend user bin and Nix directories
+# Prepend user bin and Homebrew directories
 $env.PATH = (
     $env.PATH
     | split row (char esep)
     | prepend [
+        "/home/linuxbrew/.linuxbrew/bin"
+        "/home/linuxbrew/.linuxbrew/sbin"
+        "/opt/homebrew/bin"
+        "/opt/homebrew/sbin"
+        "/usr/local/bin"
+        "/usr/local/sbin"
         ($env.HOME | path join ".local" "bin")
         ($env.HOME | path join "bin")
         ($env.HOME | path join ".cargo" "bin")
     ]
+    | where {|path| $path | path exists }
 )
-
-let global_nix_bin = "/nix/var/nix/profiles/default/bin"
-if ($global_nix_bin | path exists) {
-    $env.PATH = ($env.PATH | split row (char esep) | prepend $global_nix_bin)
-}
 
 $env.PATH = ($env.PATH | uniq)

@@ -146,29 +146,13 @@ systemd:
 
         [Install]
         WantedBy=local-fs.target
-    - name: install-nix.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Install Nix with Determinate Systems installer
-        Wants=network-online.target
-        After=network-online.target
-        ConditionPathExists=!/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-
-        [Service]
-        Type=oneshot
-        RemainAfterExit=yes
-        ExecStart=/bin/bash -lc 'curl --proto "=https" --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm'
-
-        [Install]
-        WantedBy=multi-user.target
     - name: apply-chezmoi.service
       enabled: true
       contents: |
         [Unit]
         Description=Bootstrap dotfiles with chezmoi
-        Wants=network-online.target install-nix.service
-        After=network-online.target install-nix.service
+        Wants=network-online.target
+        After=network-online.target
         ConditionPathExists=!/var/home/lutvzn/.local/share/chezmoi/.git
 
         [Service]

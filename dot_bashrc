@@ -10,19 +10,24 @@
 # If not running interactively, don't do anything else
 [[ $- != *i* ]] && return
 
+# Initialize Homebrew when available
+for BREW_BIN in /home/linuxbrew/.linuxbrew/bin/brew /opt/homebrew/bin/brew /usr/local/bin/brew; do
+  if [ -x "$BREW_BIN" ]; then
+    eval "$("$BREW_BIN" shellenv)"
+    break
+  fi
+done
+unset BREW_BIN
+
 # Initialize blesh (should be early)
-[ -f "/nix/var/nix/profiles/default/share/blesh/ble.sh" ] && . "/nix/var/nix/profiles/default/share/blesh/ble.sh"
+[ -n "${HOMEBREW_PREFIX:-}" ] && [ -f "$HOMEBREW_PREFIX/share/blesh/ble.sh" ] && . "$HOMEBREW_PREFIX/share/blesh/ble.sh"
 
 # -----------------------------------------------------------------------------
 # 2. Environment & PATH
 # -----------------------------------------------------------------------------
 
-# Prepend user bin and Nix directories
+# Prepend user bin directories
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
-
-if [ -d "/nix/var/nix/profiles/default/bin" ]; then
-  export PATH="/nix/var/nix/profiles/default/bin:$PATH"
-fi
 
 # Cargo / Rust environment
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"

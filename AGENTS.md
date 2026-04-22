@@ -13,8 +13,8 @@ This repository is designed to be managed and interacted with by AI agents (like
 
 ### Personal Scripts
 - **Location**: `dot_config/personalScripts/`
-- **Nix Installation**: A script in `run_onchange_01-install-nix.sh` handles the installation of Nix using the Determinate Systems installer.
-- **Nix Packages**: The file `dot_config/nix/flake.nix` defines the core CLI toolset.
-- **Package Management**: A script in `run_onchange_02-install-packages.sh.tmpl` triggers updates whenever `flake.nix` changes.
-- **Execution Order**: Scripts prefixed with `run_onchange_` are prioritized by `chezmoi` to ensure dependencies like Nix are available for other configuration tasks.
+- **Homebrew Installation**: `run_once_before_00-install-prereqs.sh.tmpl` installs Homebrew on Linux after ensuring base prerequisites like `git` and `curl` are present.
+- **CLI Packages**: `dot_config/homebrew/Brewfile` defines the core CLI toolset.
+- **Package Management**: `run_onchange_after_02-install-packages.sh.tmpl` reapplies the Brew bundle whenever the Brewfile changes.
+- **Execution Order**: Scripts prefixed with `run_onchange_` are prioritized by `chezmoi` to ensure dependencies like Homebrew are available for other configuration tasks.
 - **Logging**: Installation scripts should log their status (success/error/info) to `~/.config/personalScripts/logs/<Script-Name>.log` for troubleshooting.

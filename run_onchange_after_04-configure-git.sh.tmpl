@@ -1,15 +1,15 @@
 {{ if eq .chezmoi.os "linux" -}}
 #!/bin/bash
 
-# run_onchange_after_04-configure-git.sh.tmpl hash: {{ include "dot_config/nix/cli.nix" | sha256sum }}
+# run_onchange_after_04-configure-git.sh.tmpl hash: {{ include "dot_config/homebrew/Brewfile" | sha256sum }}
 
 echo "Configuring git..."
 git config --global --unset-all credential.https://github.com.helper || true
 git config --global --add credential.https://github.com.helper ""
-git config --global --add credential.https://github.com.helper "!/nix/var/nix/profiles/default/bin/gh auth git-credential"
+git config --global --add credential.https://github.com.helper "!gh auth git-credential"
 git config --global --unset-all credential.https://gist.github.com.helper || true
 git config --global --add credential.https://gist.github.com.helper ""
-git config --global --add credential.https://gist.github.com.helper "!/nix/var/nix/profiles/default/bin/gh auth git-credential"
+git config --global --add credential.https://gist.github.com.helper "!gh auth git-credential"
 
 echo "Git configured."
 {{ end -}}

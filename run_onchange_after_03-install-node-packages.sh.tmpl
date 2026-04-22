@@ -7,7 +7,6 @@ LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_after_03-install-node-packages.log"
 PACKAGES_FILE="$LOG_HOME/.config/packages/npm-global.txt"
-NIX_PROFILE_SCRIPT="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
 NODE_VERSION="24"
 
 mkdir -p "$LOG_DIR"
@@ -16,14 +15,26 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
+source_brew_environment() {
+  local brew_bin
+
+  for brew_bin in \
+    "/home/linuxbrew/.linuxbrew/bin/brew" \
+    "/opt/homebrew/bin/brew" \
+    "/usr/local/bin/brew"; do
+    if [ -x "$brew_bin" ]; then
+      eval "$("$brew_bin" shellenv)"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 log_message "INFO: Starting run_onchange_after_03-install-node-packages."
 log_message "INFO: Using package list at $PACKAGES_FILE."
 
-if [ -e "$NIX_PROFILE_SCRIPT" ]; then
-  # shellcheck disable=SC1090
-  log_message "INFO: Sourcing Nix profile script from $NIX_PROFILE_SCRIPT."
-  . "$NIX_PROFILE_SCRIPT"
-fi
+source_brew_environment || true
 
 if ! command -v fnm >/dev/null 2>&1; then
   log_message "ERROR: fnm is not installed or not available in PATH."

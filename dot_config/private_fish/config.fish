@@ -1,11 +1,16 @@
 set -g fish_greeting
 
 if status is-interactive
-    # Prepend user bin and Nix directories
-    fish_add_path ~/.local/bin ~/bin
-    if test -d /nix/var/nix/profiles/default/bin
-        fish_add_path /nix/var/nix/profiles/default/bin
+    # Initialize Homebrew when available
+    for brew_bin in /home/linuxbrew/.linuxbrew/bin/brew /opt/homebrew/bin/brew /usr/local/bin/brew
+        if test -x $brew_bin
+            eval ($brew_bin shellenv)
+            break
+        end
     end
+
+    # Prepend user bin directories
+    fish_add_path ~/.local/bin ~/bin
 
     # Tool Initialization
     if type -q zoxide; zoxide init fish | source; end

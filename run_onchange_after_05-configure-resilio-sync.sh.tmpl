@@ -19,8 +19,10 @@ resolve_rslsync_bin() {
   local candidate
 
   for candidate in \
-    "/nix/var/nix/profiles/default/bin/rslsync" \
-    "$HOME/.nix-profile/bin/rslsync"; do
+    "$(command -v rslsync 2>/dev/null)" \
+    "/home/linuxbrew/.linuxbrew/bin/rslsync" \
+    "/opt/homebrew/bin/rslsync" \
+    "/usr/local/bin/rslsync"; do
     if [ -x "$candidate" ]; then
       RSLSYNC_BIN="$candidate"
       return 0
@@ -69,7 +71,7 @@ if ! command -v systemctl >/dev/null 2>&1; then
 fi
 
 if ! resolve_rslsync_bin; then
-  log_message "WARNING: rslsync was not found in the global or user Nix profiles; install the flake packages before enabling the service."
+  log_message "WARNING: rslsync was not found in PATH or common Homebrew locations; install it before enabling the service."
   exit 0
 fi
 

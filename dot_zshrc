@@ -7,31 +7,43 @@
 # If not running interactively, don't do anything else
 [[ -o interactive ]] || return
 
+# Initialize Homebrew when available
+for BREW_BIN in /home/linuxbrew/.linuxbrew/bin/brew /opt/homebrew/bin/brew /usr/local/bin/brew; do
+  if [ -x "$BREW_BIN" ]; then
+    eval "$("$BREW_BIN" shellenv)"
+    break
+  fi
+done
+unset BREW_BIN
+
 # -----------------------------------------------------------------------------
 # 2. Environment & PATH
 # -----------------------------------------------------------------------------
 
-# Prepend user bin and Nix directories
+# Prepend user bin directories
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
-
-if [ -d "/nix/var/nix/profiles/default/bin" ]; then
-  export PATH="/nix/var/nix/profiles/default/bin:$PATH"
-fi
 
 # Cargo / Rust environment
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # -----------------------------------------------------------------------------
-# 3. Zim Shell Modules (via Nix)
+# 3. Zim Shell Modules
 # -----------------------------------------------------------------------------
 
 ZIM_HOME=${ZIM_HOME:-${XDG_CACHE_HOME:-${HOME}/.cache}/zim}
-if [[ -f "/nix/var/nix/profiles/default/zimfw.zsh" ]]; then
+ZIMFW_SCRIPT=""
+if [[ -n "${HOMEBREW_PREFIX:-}" && -f "$HOMEBREW_PREFIX/share/zimfw/zimfw.zsh" ]]; then
+  ZIMFW_SCRIPT="$HOMEBREW_PREFIX/share/zimfw/zimfw.zsh"
+elif [[ -f "${ZDOTDIR:-$HOME}/.zim/zimfw.zsh" ]]; then
+  ZIMFW_SCRIPT="${ZDOTDIR:-$HOME}/.zim/zimfw.zsh"
+fi
+if [[ -n "$ZIMFW_SCRIPT" ]]; then
   if [[ ! -e ${ZIM_HOME}/init.zsh ]]; then
-    source "/nix/var/nix/profiles/default/zimfw.zsh" install
+    source "$ZIMFW_SCRIPT" install
   fi
   source ${ZIM_HOME}/init.zsh
 fi
+unset ZIMFW_SCRIPT
 
 # -----------------------------------------------------------------------------
 # 4. Prompt Customization (Fallback)

@@ -1,19 +1,14 @@
 {{ if eq .chezmoi.os "linux" -}}
 #!/bin/bash
 
-# This hash ensures the script runs whenever flake.nix changes:
-# flake.nix hash: {{ include "dot_config/nix/flake.nix" | sha256sum }}
-# flake.lock hash: {{ include "dot_config/nix/flake.lock" | sha256sum }}
-# cli.nix hash: {{ include "dot_config/nix/cli.nix" | sha256sum }}
+# This hash ensures the script runs whenever the Brewfile changes:
+# Brewfile hash: {{ include "dot_config/homebrew/Brewfile" | sha256sum }}
 
 LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_02-install-packages.log"
-GLOBAL_PROFILE="/nix/var/nix/profiles/default"
 SOURCE_HOME="${ORIG_HOME:-$HOME}"
-FLAKE_DIR="$SOURCE_HOME/.config/nix"
-FLAKE_REF="$FLAKE_DIR#system-cli"
-PROFILE_ENTRY_NAME="system-cli"
+BREWFILE="$SOURCE_HOME/.config/homebrew/Brewfile"
 
 # Ensure the log directory exists
 mkdir -p "$LOG_DIR"
@@ -22,59 +17,40 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
-ensure_root() {
-  if [ "$(id -u)" -eq 0 ]; then
-    return
-  fi
+source_brew_environment() {
+  local brew_bin
 
-  if ! command -v sudo >/dev/null 2>&1; then
-    log_message "ERROR: sudo is required to install system-wide Nix packages."
-    exit 1
-  fi
+  for brew_bin in \
+    "/home/linuxbrew/.linuxbrew/bin/brew" \
+    "/opt/homebrew/bin/brew" \
+    "/usr/local/bin/brew"; do
+    if [ -x "$brew_bin" ]; then
+      eval "$("$brew_bin" shellenv)"
+      return 0
+    fi
+  done
 
-  log_message "INFO: Escalating with sudo to install system-wide Nix packages."
-  exec sudo ORIG_HOME="$HOME" bash "$0" "$@"
+  return 1
 }
 
-ensure_root "$@"
+source_brew_environment || true
 
-# Source Nix environment in case it was just installed by the previous script
-if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
-  . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
-fi
-
-if ! command -v nix >/dev/null 2>&1; then
-  log_message "ERROR: Nix is not installed."
+if ! command -v brew >/dev/null 2>&1; then
+  log_message "ERROR: Homebrew is not installed."
   exit 1
 fi
 
-# Fresh Nix installs may not enable these features in nix.conf yet.
-NIX_CMD=(nix --extra-experimental-features 'nix-command flakes')
-
-if [ ! -d "$FLAKE_DIR" ]; then
-  log_message "ERROR: Expected flake directory $FLAKE_DIR was not found."
+if [ ! -f "$BREWFILE" ]; then
+  log_message "ERROR: Expected Brewfile $BREWFILE was not found."
   exit 1
 fi
 
-log_message "Installing/Updating system-wide Nix packages from $FLAKE_REF..."
+log_message "Installing/Updating Homebrew packages from $BREWFILE..."
 
-# Install or upgrade the named package defined in your flake without touching
-# the Determinate-managed Nix entry that already lives in the default profile.
-if "${NIX_CMD[@]}" profile list --profile "$GLOBAL_PROFILE" | grep -q "Name:.*$PROFILE_ENTRY_NAME"; then
-  log_message "Upgrading system-wide Nix packages from flake..."
-  if "${NIX_CMD[@]}" profile upgrade --profile "$GLOBAL_PROFILE" "$PROFILE_ENTRY_NAME"; then
-    log_message "SUCCESS: Nix packages upgraded successfully."
-  else
-    log_message "ERROR: Failed to upgrade Nix packages."
-    exit 1
-  fi
+if brew bundle --file="$BREWFILE" --no-lock; then
+  log_message "SUCCESS: Homebrew packages installed successfully."
 else
-  log_message "Installing system-wide Nix packages from flake for the first time..."
-  if "${NIX_CMD[@]}" profile install --profile "$GLOBAL_PROFILE" "$FLAKE_REF"; then
-    log_message "SUCCESS: Nix packages installed successfully."
-  else
-    log_message "ERROR: Failed to install Nix packages."
-    exit 1
-  fi
+  log_message "ERROR: Failed to install Homebrew packages."
+  exit 1
 fi
 {{ end -}}
