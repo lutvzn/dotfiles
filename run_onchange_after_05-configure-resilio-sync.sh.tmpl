@@ -7,6 +7,7 @@
 LOG_DIR="$HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_after_05-configure-resilio-sync.log"
 RSLSYNC_BIN=""
+SYNC_ROOT="/var/sync"
 
 # Ensure the log directory exists
 mkdir -p "$LOG_DIR"
@@ -34,7 +35,7 @@ resolve_rslsync_bin() {
 
 run_with_sudo() {
   if ! command -v sudo >/dev/null 2>&1; then
-    log_message "ERROR: sudo is required to manage /sync ownership."
+    log_message "ERROR: sudo is required to manage $SYNC_ROOT ownership."
     exit 1
   fi
 
@@ -43,22 +44,22 @@ run_with_sudo() {
 
 log_message "Configuring resilio-sync user service..."
 
-if [ ! -d "/sync" ]; then
-  log_message "Creating /sync directory..."
-  log_message "INFO: Escalating with sudo to create /sync."
-  if run_with_sudo mkdir -p /sync; then
-    log_message "SUCCESS: /sync directory created."
+if [ ! -d "$SYNC_ROOT" ]; then
+  log_message "Creating $SYNC_ROOT directory..."
+  log_message "INFO: Escalating with sudo to create $SYNC_ROOT."
+  if run_with_sudo mkdir -p "$SYNC_ROOT"; then
+    log_message "SUCCESS: $SYNC_ROOT directory created."
   else
-    log_message "ERROR: Failed to create /sync directory."
+    log_message "ERROR: Failed to create $SYNC_ROOT directory."
     exit 1
   fi
 fi
 
-log_message "INFO: Escalating with sudo to set ownership on /sync."
-if run_with_sudo chown -R lutvzn:lutvzn /sync; then
-  log_message "SUCCESS: Ownership set on /sync for lutvzn."
+log_message "INFO: Escalating with sudo to set ownership on $SYNC_ROOT."
+if run_with_sudo chown -R lutvzn:lutvzn "$SYNC_ROOT"; then
+  log_message "SUCCESS: Ownership set on $SYNC_ROOT for lutvzn."
 else
-  log_message "ERROR: Failed to set ownership on /sync."
+  log_message "ERROR: Failed to set ownership on $SYNC_ROOT."
   exit 1
 fi
 

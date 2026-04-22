@@ -47,7 +47,7 @@ fi
 
 log_message "Installing/Updating Homebrew packages from $BREWFILE..."
 
-if brew bundle --file="$BREWFILE" --no-lock; then
+if brew bundle --file="$BREWFILE"; then
   log_message "SUCCESS: Homebrew packages installed successfully."
 else
   log_message "ERROR: Failed to install Homebrew packages."

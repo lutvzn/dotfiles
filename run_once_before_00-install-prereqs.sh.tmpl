@@ -54,6 +54,10 @@ detect_os() {
   DISTRO_LIKE="${ID_LIKE:-}"
 }
 
+is_ostree() {
+  [ -d /sys/fs/ostree ] || [ -f /run/ostree-booted ]
+}
+
 install_with_apt() {
   log_message "INFO: Installing missing prerequisite packages with apt: ${MISSING_PACKAGES[*]}."
 
@@ -77,6 +81,20 @@ install_with_dnf() {
     log_message "SUCCESS: Missing prerequisite packages installed with dnf."
   else
     log_message "ERROR: Failed to install missing prerequisite packages with dnf."
+    exit 1
+  fi
+}
+
+install_with_rpm_ostree() {
+  log_message "INFO: Installing missing prerequisite packages with rpm-ostree: ${MISSING_PACKAGES[*]}."
+
+  if run_with_sudo rpm-ostree install "${MISSING_PACKAGES[@]}"; then
+    log_message "SUCCESS: Missing prerequisite packages queued with rpm-ostree."
+    log_message "INFO: A reboot may be required before the newly installed commands are available."
+    log_message "INFO: Reboot the system and re-run chezmoi apply to continue bootstrap."
+    exit 0
+  else
+    log_message "ERROR: Failed to install missing prerequisite packages with rpm-ostree."
     exit 1
   fi
 }
@@ -235,7 +253,11 @@ else
       install_with_apt
       ;;
     fedora)
-      install_with_dnf
+      if is_ostree && command -v rpm-ostree >/dev/null 2>&1; then
+        install_with_rpm_ostree
+      else
+        install_with_dnf
+      fi
       ;;
     arch|artix)
       install_with_pacman
@@ -258,7 +280,11 @@ else
           install_with_pacman
           ;;
         *" fedora "*|*" rhel "*)
-          install_with_dnf
+          if is_ostree && command -v rpm-ostree >/dev/null 2>&1; then
+            install_with_rpm_ostree
+          else
+            install_with_dnf
+          fi
           ;;
         *" suse "*)
           install_with_zypper

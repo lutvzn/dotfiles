@@ -18,5 +18,5 @@ def --wrapped cz [...rest] {
 }
 
 def bub [] {
-    ^brew bundle --file $"($env.HOME)/.config/homebrew/Brewfile" --no-lock
+    ^brew bundle --file $"($env.HOME)/.config/homebrew/Brewfile"
 }

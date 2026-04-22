@@ -1,10 +1,7 @@
 # Core CLI toolset managed by Homebrew.
 
-tap "homebrew/core"
-
 brew "ansible"
 brew "atuin"
-brew "bun"
 brew "eza"
 brew "fastfetch"
 brew "fd"

@@ -15,7 +15,7 @@ log_message() {
 }
 
 if ! command -v ansible-playbook >/dev/null 2>&1; then
-  log_message "ERROR: ansible-playbook is not installed. Run run_once_before_00-install-ansible first."
+  log_message "ERROR: ansible-playbook is not installed. Run run_onchange_02-install-packages first."
   exit 1
 fi
 
