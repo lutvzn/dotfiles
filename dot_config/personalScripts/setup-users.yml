@@ -2,7 +2,6 @@
 - name: Ensure local users and rootless Podman prerequisites exist
   hosts: localhost
   connection: local
-  become: true
   gather_facts: false
 
   vars:

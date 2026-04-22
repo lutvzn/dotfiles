@@ -5,8 +5,8 @@
 
 LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
-LOG_FILE="$LOG_DIR/run_onchange_00-setup-users.log"
-DEFAULT_CHEZMOI_SOURCE_DIR="$LOG_HOME/.local/share/chezmoi"
+LOG_FILE="$LOG_DIR/run_onchange_01-setup-users.log"
+CHEZMOI_SOURCE_DIR="{{ .chezmoi.sourceDir }}"
 
 mkdir -p "$LOG_DIR"
 
@@ -14,36 +14,11 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
-ensure_root() {
-  if [ "$(id -u)" -eq 0 ]; then
-    return
-  fi
-
-  if ! command -v sudo >/dev/null 2>&1; then
-    log_message "ERROR: sudo is required to create users."
-    exit 1
-  fi
-
-  log_message "INFO: Escalating with sudo to create users."
-  exec sudo ORIG_HOME="$HOME" bash "$0" "$@"
-}
-
-resolve_chezmoi_source_dir() {
-  if command -v chezmoi >/dev/null 2>&1; then
-    chezmoi source-path
-  else
-    echo "$DEFAULT_CHEZMOI_SOURCE_DIR"
-  fi
-}
-
-ensure_root "$@"
-
 if ! command -v ansible-playbook >/dev/null 2>&1; then
   log_message "ERROR: ansible-playbook is not installed. Run run_once_before_00-install-ansible first."
   exit 1
 fi
 
-CHEZMOI_SOURCE_DIR="$(resolve_chezmoi_source_dir)"
 PLAYBOOK_PATH="$CHEZMOI_SOURCE_DIR/dot_config/personalScripts/setup-users.yml"
 
 if [ ! -f "$PLAYBOOK_PATH" ]; then
@@ -52,7 +27,19 @@ if [ ! -f "$PLAYBOOK_PATH" ]; then
 fi
 
 log_message "INFO: Applying user creation playbook $PLAYBOOK_PATH."
-if ansible-playbook "$PLAYBOOK_PATH"; then
+if [ "$(id -u)" -ne 0 ] && ! command -v sudo >/dev/null 2>&1; then
+  log_message "ERROR: sudo is required to run the user creation playbook."
+  exit 1
+fi
+
+ANSIBLE_PLAYBOOK_CMD=(ansible-playbook "$PLAYBOOK_PATH")
+
+if [ "$(id -u)" -ne 0 ]; then
+  log_message "INFO: Escalating with sudo to run the user creation playbook."
+  ANSIBLE_PLAYBOOK_CMD=(sudo "${ANSIBLE_PLAYBOOK_CMD[@]}")
+fi
+
+if "${ANSIBLE_PLAYBOOK_CMD[@]}"; then
   log_message "SUCCESS: User bootstrap playbook applied successfully."
 else
   log_message "ERROR: Failed to apply user bootstrap playbook."
