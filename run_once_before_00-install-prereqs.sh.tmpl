@@ -5,6 +5,7 @@ LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_once_before_00-install-prereqs.log"
 REQUIRED_PACKAGES=(git curl)
+MISSING_PACKAGES=()
 
 mkdir -p "$LOG_DIR"
 
@@ -37,88 +38,92 @@ detect_os() {
 }
 
 install_with_apt() {
-  log_message "INFO: Installing required packages with apt: ${REQUIRED_PACKAGES[*]}."
+  log_message "INFO: Installing missing prerequisite packages with apt: ${MISSING_PACKAGES[*]}."
 
   if ! run_with_sudo apt-get update; then
     log_message "ERROR: apt-get update failed."
     exit 1
   fi
 
-  if run_with_sudo apt-get install -y "${REQUIRED_PACKAGES[@]}"; then
-    log_message "SUCCESS: Required packages installed with apt."
+  if run_with_sudo apt-get install -y "${MISSING_PACKAGES[@]}"; then
+    log_message "SUCCESS: Missing prerequisite packages installed with apt."
   else
-    log_message "ERROR: Failed to install required packages with apt."
+    log_message "ERROR: Failed to install missing prerequisite packages with apt."
     exit 1
   fi
 }
 
 install_with_dnf() {
-  log_message "INFO: Installing required packages with dnf: ${REQUIRED_PACKAGES[*]}."
+  log_message "INFO: Installing missing prerequisite packages with dnf: ${MISSING_PACKAGES[*]}."
 
-  if run_with_sudo dnf install -y "${REQUIRED_PACKAGES[@]}"; then
-    log_message "SUCCESS: Required packages installed with dnf."
+  if run_with_sudo dnf install -y "${MISSING_PACKAGES[@]}"; then
+    log_message "SUCCESS: Missing prerequisite packages installed with dnf."
   else
-    log_message "ERROR: Failed to install required packages with dnf."
+    log_message "ERROR: Failed to install missing prerequisite packages with dnf."
     exit 1
   fi
 }
 
 install_with_zypper() {
-  log_message "INFO: Installing required packages with zypper: ${REQUIRED_PACKAGES[*]}."
+  log_message "INFO: Installing missing prerequisite packages with zypper: ${MISSING_PACKAGES[*]}."
 
-  if run_with_sudo zypper --non-interactive refresh && run_with_sudo zypper --non-interactive install --no-confirm "${REQUIRED_PACKAGES[@]}"; then
-    log_message "SUCCESS: Required packages installed with zypper."
+  if run_with_sudo zypper --non-interactive refresh && run_with_sudo zypper --non-interactive install --no-confirm "${MISSING_PACKAGES[@]}"; then
+    log_message "SUCCESS: Missing prerequisite packages installed with zypper."
   else
-    log_message "ERROR: Failed to install required packages with zypper."
+    log_message "ERROR: Failed to install missing prerequisite packages with zypper."
     exit 1
   fi
 }
 
 install_with_pacman() {
-  log_message "INFO: Installing required packages with pacman: ${REQUIRED_PACKAGES[*]}."
+  log_message "INFO: Installing missing prerequisite packages with pacman: ${MISSING_PACKAGES[*]}."
 
-  if run_with_sudo pacman -Sy --noconfirm "${REQUIRED_PACKAGES[@]}"; then
-    log_message "SUCCESS: Required packages installed with pacman."
+  if run_with_sudo pacman -Sy --noconfirm "${MISSING_PACKAGES[@]}"; then
+    log_message "SUCCESS: Missing prerequisite packages installed with pacman."
   else
-    log_message "ERROR: Failed to install required packages with pacman."
+    log_message "ERROR: Failed to install missing prerequisite packages with pacman."
     exit 1
   fi
 }
 
 install_with_xbps() {
-  log_message "INFO: Installing required packages with xbps-install: ${REQUIRED_PACKAGES[*]}."
+  log_message "INFO: Installing missing prerequisite packages with xbps-install: ${MISSING_PACKAGES[*]}."
 
-  if run_with_sudo xbps-install -Sy "${REQUIRED_PACKAGES[@]}"; then
-    log_message "SUCCESS: Required packages installed with xbps-install."
+  if run_with_sudo xbps-install -Sy "${MISSING_PACKAGES[@]}"; then
+    log_message "SUCCESS: Missing prerequisite packages installed with xbps-install."
   else
-    log_message "ERROR: Failed to install required packages with xbps-install."
+    log_message "ERROR: Failed to install missing prerequisite packages with xbps-install."
     exit 1
   fi
 }
 
 install_with_apk() {
-  log_message "INFO: Installing required packages with apk: ${REQUIRED_PACKAGES[*]}."
+  log_message "INFO: Installing missing prerequisite packages with apk: ${MISSING_PACKAGES[*]}."
 
-  if run_with_sudo apk add "${REQUIRED_PACKAGES[@]}"; then
-    log_message "SUCCESS: Required packages installed with apk."
+  if run_with_sudo apk add "${MISSING_PACKAGES[@]}"; then
+    log_message "SUCCESS: Missing prerequisite packages installed with apk."
   else
-    log_message "ERROR: Failed to install required packages with apk."
+    log_message "ERROR: Failed to install missing prerequisite packages with apk."
     exit 1
   fi
 }
 
-have_required_packages() {
-  local missing=0
+find_missing_required_packages() {
   local package
+
+  MISSING_PACKAGES=()
 
   for package in "${REQUIRED_PACKAGES[@]}"; do
     if ! command -v "$package" >/dev/null 2>&1; then
       log_message "INFO: Missing required command: $package."
-      missing=1
+      MISSING_PACKAGES+=("$package")
     fi
   done
+}
 
-  return "$missing"
+have_required_packages() {
+  find_missing_required_packages
+  [ "${#MISSING_PACKAGES[@]}" -eq 0 ]
 }
 
 source_brew_environment() {
@@ -147,9 +152,12 @@ install_brew() {
     return
   fi
 
-  log_message "INFO: Installing Homebrew."
+  log_message "INFO: Installing Homebrew with sudo."
 
-  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  if ! run_with_sudo env NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+    log_message "ERROR: Homebrew installer exited with a failure status."
+    exit 1
+  fi
   source_brew_environment
 
   if have_brew; then
@@ -168,46 +176,53 @@ if have_required_packages && have_brew; then
   exit 0
 fi
 
-case "$DISTRO_ID" in
-  ubuntu)
-    install_with_apt
-    ;;
-  fedora)
-    install_with_dnf
-    ;;
-  arch|artix)
-    install_with_pacman
-    ;;
-  void)
-    install_with_xbps
-    ;;
-  alpine)
-    install_with_apk
-    ;;
-  opensuse*|sles)
-    install_with_zypper
-    ;;
-  *)
-    case " $DISTRO_LIKE " in
-      *" debian "*)
-        install_with_apt
-        ;;
-      *" arch "*)
-        install_with_pacman
-        ;;
-      *" fedora "*|*" rhel "*)
-        install_with_dnf
-        ;;
-      *" suse "*)
-        install_with_zypper
-        ;;
-      *)
-        log_message "ERROR: Unsupported distribution ID '$DISTRO_ID' (ID_LIKE='$DISTRO_LIKE')."
-        exit 1
-        ;;
-    esac
-    ;;
-esac
+find_missing_required_packages
+
+if [ "${#MISSING_PACKAGES[@]}" -eq 0 ]; then
+  log_message "INFO: All prerequisite packages are already installed; skipping distro package installation."
+else
+
+  case "$DISTRO_ID" in
+    ubuntu)
+      install_with_apt
+      ;;
+    fedora)
+      install_with_dnf
+      ;;
+    arch|artix)
+      install_with_pacman
+      ;;
+    void)
+      install_with_xbps
+      ;;
+    alpine)
+      install_with_apk
+      ;;
+    opensuse*|sles)
+      install_with_zypper
+      ;;
+    *)
+      case " $DISTRO_LIKE " in
+        *" debian "*)
+          install_with_apt
+          ;;
+        *" arch "*)
+          install_with_pacman
+          ;;
+        *" fedora "*|*" rhel "*)
+          install_with_dnf
+          ;;
+        *" suse "*)
+          install_with_zypper
+          ;;
+        *)
+          log_message "ERROR: Unsupported distribution ID '$DISTRO_ID' (ID_LIKE='$DISTRO_LIKE')."
+          exit 1
+          ;;
+      esac
+      ;;
+  esac
+fi
 
 install_brew
 
