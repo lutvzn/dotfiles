@@ -3,12 +3,15 @@
 
 # This hash ensures the script runs whenever the Brewfile changes:
 # Brewfile hash: {{ include "dot_config/homebrew/Brewfile" | sha256sum }}
+# npm global packages hash: {{ include "dot_config/packages/npm-global.txt" | sha256sum }}
 
 LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_02-install-packages.log"
 SOURCE_HOME="${ORIG_HOME:-$HOME}"
 BREWFILE="$SOURCE_HOME/.config/homebrew/Brewfile"
+PACKAGES_FILE="$SOURCE_HOME/.config/packages/npm-global.txt"
+NODE_VERSION="24"
 
 # Ensure the log directory exists
 mkdir -p "$LOG_DIR"
@@ -53,4 +56,64 @@ else
   log_message "ERROR: Failed to install Homebrew packages."
   exit 1
 fi
+
+log_message "INFO: Using npm package list at $PACKAGES_FILE."
+
+source_brew_environment || true
+
+if ! command -v fnm >/dev/null 2>&1; then
+  log_message "ERROR: fnm is not installed or not available in PATH."
+  exit 1
+fi
+
+log_message "INFO: fnm found at $(command -v fnm)."
+
+if [ ! -f "$PACKAGES_FILE" ]; then
+  log_message "ERROR: Package list not found at $PACKAGES_FILE."
+  exit 1
+fi
+
+log_message "Configuring fnm environment..."
+eval "$(fnm env --shell bash)"
+
+log_message "Installing Node.js $NODE_VERSION with fnm..."
+if ! fnm install "$NODE_VERSION"; then
+  log_message "ERROR: Failed to install Node.js $NODE_VERSION."
+  exit 1
+fi
+
+log_message "Setting Node.js $NODE_VERSION as the default version..."
+if ! fnm default "$NODE_VERSION"; then
+  log_message "ERROR: Failed to set Node.js $NODE_VERSION as the default version."
+  exit 1
+fi
+
+log_message "Activating Node.js $NODE_VERSION..."
+if ! fnm use "$NODE_VERSION" >/dev/null; then
+  log_message "ERROR: Failed to activate Node.js $NODE_VERSION."
+  exit 1
+fi
+
+if ! command -v npm >/dev/null 2>&1; then
+  log_message "ERROR: npm is not available in PATH after activating Node.js $NODE_VERSION."
+  exit 1
+fi
+
+log_message "INFO: npm found at $(command -v npm)."
+
+mapfile -t packages < <(grep -vE '^\s*(#|$)' "$PACKAGES_FILE")
+
+if [ "${#packages[@]}" -eq 0 ]; then
+  log_message "INFO: No npm global packages were listed in $PACKAGES_FILE."
+  exit 0
+fi
+
+log_message "INFO: npm global packages to install: ${packages[*]}."
+log_message "Installing npm global packages from $PACKAGES_FILE..."
+if ! npm install --global "${packages[@]}"; then
+  log_message "ERROR: Failed to install npm global packages."
+  exit 1
+fi
+
+log_message "SUCCESS: Node.js $NODE_VERSION and npm global packages are installed."
 {{ end -}}
