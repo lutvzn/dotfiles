@@ -22,6 +22,29 @@
       ansible.builtin.set_fact:
         home_root: "{{ '/var/home' if var_home.stat.exists else '/home' }}"
 
+    - name: Check whether zsh is available
+      ansible.builtin.shell: |
+        set -o pipefail
+        PATH="/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+        command -v zsh
+      args:
+        executable: /bin/bash
+      register: zsh_lookup
+      changed_when: false
+      failed_when: false
+
+    - name: Select lutvzn login shell
+      ansible.builtin.set_fact:
+        lutvzn_shell: "{{ zsh_lookup.stdout | trim if zsh_lookup.rc == 0 else '/bin/bash' }}"
+
+    - name: Ensure lutvzn zsh shell is registered as a valid login shell
+      ansible.builtin.lineinfile:
+        path: /etc/shells
+        line: "{{ lutvzn_shell }}"
+        create: true
+        mode: "0644"
+      when: lutvzn_shell != "/bin/bash"
+
     - name: Define managed users
       ansible.builtin.set_fact:
         managed_users:
@@ -31,7 +54,7 @@
             groups:
               - deploy
             home: "{{ home_root }}/lutvzn"
-            shell: /bin/bash
+            shell: "{{ lutvzn_shell }}"
           - name: deploy
             uid: 5001
             group: deploy
