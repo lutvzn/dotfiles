@@ -112,6 +112,20 @@ install_with_zypper() {
   fi
 }
 
+install_with_transactional_update() {
+  log_message "INFO: Installing missing prerequisite packages with transactional-update: ${MISSING_PACKAGES[*]}."
+
+  if run_with_sudo transactional-update --non-interactive pkg install "${MISSING_PACKAGES[@]}"; then
+    log_message "SUCCESS: Missing prerequisite packages queued with transactional-update."
+    log_message "INFO: A reboot is required before the newly installed commands are available."
+    log_message "INFO: Reboot the system and re-run chezmoi apply to continue bootstrap."
+    exit 0
+  else
+    log_message "ERROR: Failed to install missing prerequisite packages with transactional-update."
+    exit 1
+  fi
+}
+
 install_with_pacman() {
   log_message "INFO: Installing missing prerequisite packages with pacman: ${MISSING_PACKAGES[*]}."
 
@@ -311,6 +325,14 @@ else
     alpine)
       install_with_apk
       ;;
+    opensuse-microos|microos)
+      if command -v transactional-update >/dev/null 2>&1; then
+        install_with_transactional_update
+      else
+        log_message "ERROR: transactional-update is required on openSUSE MicroOS but was not found."
+        exit 1
+      fi
+      ;;
     opensuse*|sles)
       install_with_zypper
       ;;
@@ -330,7 +352,11 @@ else
           fi
           ;;
         *" suse "*)
-          install_with_zypper
+          if [ "$DISTRO_ID" = "opensuse-microos" ] && command -v transactional-update >/dev/null 2>&1; then
+            install_with_transactional_update
+          else
+            install_with_zypper
+          fi
           ;;
         *)
           log_message "ERROR: Unsupported distribution ID '$DISTRO_ID' (ID_LIKE='$DISTRO_LIKE')."
