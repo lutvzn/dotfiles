@@ -11,6 +11,7 @@ TARGET_HOME="${ORIG_HOME:-$(getent passwd "$TARGET_USER" | cut -d: -f6)}"
 BREW_PREFIX="/home/linuxbrew/.linuxbrew"
 SUDOERS_FILE="/etc/sudoers.d/99-homebrew-secure-path"
 BREW_SECURE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin"
+PRIVILEGED_PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 
 mkdir -p "$LOG_DIR"
 
@@ -23,23 +24,35 @@ run_with_sudo() {
     "$@"
     return
   fi
-  if ! command -v sudo >/dev/null 2>&1; then
-    log_message "ERROR: sudo is required to install prerequisites."
-    exit 1
+
+  if command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+    return
   fi
 
-  sudo "$@"
+  if command -v run0 >/dev/null 2>&1; then
+    run0 /usr/bin/env "PATH=$PRIVILEGED_PATH" "$@"
+    return
+  fi
+
+  log_message "ERROR: sudo or run0 is required to install prerequisites."
+  exit 1
 }
 
 run_as_target_user() {
   if [ "$(id -u)" -eq 0 ] && [ "$TARGET_USER" != "root" ]; then
-    if ! command -v sudo >/dev/null 2>&1; then
-      log_message "ERROR: sudo is required to run commands as $TARGET_USER."
-      exit 1
+    if command -v sudo >/dev/null 2>&1; then
+      sudo -H -u "$TARGET_USER" "$@"
+      return
     fi
 
-    sudo -H -u "$TARGET_USER" "$@"
-    return
+    if command -v run0 >/dev/null 2>&1; then
+      run0 --user="$TARGET_USER" /usr/bin/env "HOME=$TARGET_HOME" "PATH=$PRIVILEGED_PATH" "$@"
+      return
+    fi
+
+    log_message "ERROR: sudo or run0 is required to run commands as $TARGET_USER."
+    exit 1
   fi
 
   "$@"
