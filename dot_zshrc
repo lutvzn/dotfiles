@@ -65,13 +65,30 @@ PROMPT='%F{green}%n@%m%f %F{cyan}%~%f
 [ "$(command -v fzf)" ] && source <(fzf --zsh)
 [ "$(command -v fnm)" ] && eval "$(fnm env --use-on-cd --shell zsh)"
 
+# Use Bash/readline-style line editing and make navigation keys consistent
+# across terminals.
+bindkey -e
+zmodload -F zsh/terminfo +p:terminfo 2>/dev/null
+
+[[ -n ${terminfo[khome]-} ]] && bindkey "${terminfo[khome]}" beginning-of-line
+[[ -n ${terminfo[kend]-} ]] && bindkey "${terminfo[kend]}" end-of-line
+[[ -n ${terminfo[kdch1]-} ]] && bindkey "${terminfo[kdch1]}" delete-char
+
+# Common xterm, Linux console, and application-mode key sequences.
+for key in '^[[H' '^[[1~' '^[OH'; do bindkey "$key" beginning-of-line; done
+for key in '^[[F' '^[[4~' '^[OF'; do bindkey "$key" end-of-line; done
+bindkey '^[[3~' delete-char
+bindkey '^[[1;5D' backward-word
+bindkey '^[[1;5C' forward-word
+bindkey '^[[3;5~' kill-word
+bindkey '^?' backward-delete-char
+unset key
+
 # Keep standard zsh completion on Tab. fzf's init can override it.
 bindkey '^I' expand-or-complete
-bindkey -M viins '^I' expand-or-complete
 
 # Preserve fzf completion on Ctrl-F instead of Tab.
 bindkey '^F' fzf-completion
-bindkey -M viins '^F' fzf-completion
 
 # -----------------------------------------------------------------------------
 # 6. Aliases & Functions

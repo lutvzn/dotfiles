@@ -4,10 +4,12 @@
 # resilio-sync.service hash: {{ include "dot_config/systemd/user/resilio-sync.service.tmpl" | sha256sum }}
 # resilio-sync.conf hash: {{ include "dot_config/resilio-sync/rslsync.conf.tmpl" | sha256sum }}
 
-LOG_DIR="$HOME/.config/personalScripts/logs"
+LOG_HOME="${ORIG_HOME:-$HOME}"
+LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_after_05-configure-resilio-sync.log"
-RSLSYNC_BIN=""
 SYNC_ROOT="/var/sync"
+TARGET_USER="${SUDO_USER:-${ORIG_USER:-$(id -un)}}"
+TARGET_GROUP="$(id -gn "$TARGET_USER")"
 PRIVILEGED_PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 
 # Ensure the log directory exists
@@ -26,7 +28,6 @@ resolve_rslsync_bin() {
     "/opt/homebrew/bin/rslsync" \
     "/usr/local/bin/rslsync"; do
     if [ -x "$candidate" ]; then
-      RSLSYNC_BIN="$candidate"
       return 0
     fi
   done
@@ -68,8 +69,8 @@ if [ ! -d "$SYNC_ROOT" ]; then
 fi
 
 log_message "INFO: Escalating privileges to set ownership on $SYNC_ROOT."
-if run_with_sudo chown -R lutvzn:lutvzn "$SYNC_ROOT"; then
-  log_message "SUCCESS: Ownership set on $SYNC_ROOT for lutvzn."
+if run_with_sudo chown -R "$TARGET_USER:$TARGET_GROUP" "$SYNC_ROOT"; then
+  log_message "SUCCESS: Ownership set on $SYNC_ROOT for $TARGET_USER:$TARGET_GROUP."
 else
   log_message "ERROR: Failed to set ownership on $SYNC_ROOT."
   exit 1

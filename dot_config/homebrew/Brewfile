@@ -2,6 +2,7 @@
 
 brew "ansible"
 brew "atuin"
+brew "chezmoi"
 brew "eza"
 brew "fastfetch"
 brew "fd"

@@ -101,7 +101,18 @@ For a quick health check if something does not apply cleanly:
 
 ```sh
 chezmoi doctor
+chezmoi verify
 ```
+
+Before applying source changes, inspect the rendered result without writing to
+your home directory:
+
+```sh
+chezmoi diff
+chezmoi execute-template < run_onchange_01-install-packages.sh.tmpl | bash -n
+```
+
+Installer logs are written to `~/.config/personalScripts/logs/`.
 
 On Windows, run the same commands from PowerShell:
 
