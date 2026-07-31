@@ -94,6 +94,13 @@ properties:
         id: Neovim.Neovim
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: WinLibs
+      directives:
+        description: Install the C compiler required by nvim-treesitter
+      settings:
+        id: BrechtSanders.WinLibs.POSIX.UCRT
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Nushell
       directives:
         description: Install Nushell
@@ -134,6 +141,13 @@ properties:
         description: Install ugrep
       settings:
         id: Genivia.ugrep
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Zellij
+      directives:
+        description: Install Zellij
+      settings:
+        id: Zellij.Zellij
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Zoxide

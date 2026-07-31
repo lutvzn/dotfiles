@@ -1,0 +1,14 @@
+{{ if eq .chezmoi.os "windows" -}}
+$xdgConfigHome = Join-Path $HOME ".config"
+$currentXdgConfigHome = [Environment]::GetEnvironmentVariable("XDG_CONFIG_HOME", "User")
+
+if ($currentXdgConfigHome -ne $xdgConfigHome) {
+    [Environment]::SetEnvironmentVariable("XDG_CONFIG_HOME", $xdgConfigHome, "User")
+    Write-Host "Configured XDG_CONFIG_HOME for the current user: $xdgConfigHome"
+} else {
+    Write-Host "XDG_CONFIG_HOME is already configured: $xdgConfigHome"
+}
+
+# Make the setting available to commands launched by this script as well.
+$env:XDG_CONFIG_HOME = $xdgConfigHome
+{{ end -}}
