@@ -15,6 +15,22 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
+source_brew_environment() {
+  local brew_bin
+
+  for brew_bin in \
+    "/home/linuxbrew/.linuxbrew/bin/brew" \
+    "/opt/homebrew/bin/brew" \
+    "/usr/local/bin/brew"; do
+    if [ -x "$brew_bin" ]; then
+      eval "$("$brew_bin" shellenv)"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 run_with_sudo() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -35,11 +51,14 @@ run_with_sudo() {
   exit 1
 }
 
+source_brew_environment || true
+
 if ! command -v ansible-playbook >/dev/null 2>&1; then
-  log_message "ERROR: ansible-playbook is not installed. Run run_onchange_01-install-packages first."
+  log_message "ERROR: ansible-playbook is not installed or is unavailable after initializing Homebrew."
   exit 1
 fi
 
+ANSIBLE_PLAYBOOK_BIN="$(command -v ansible-playbook)"
 PLAYBOOK_PATH="$CHEZMOI_SOURCE_DIR/dot_config/personalScripts/setup-users.yml"
 
 if [ ! -f "$PLAYBOOK_PATH" ]; then
@@ -52,7 +71,7 @@ if [ "$(id -u)" -ne 0 ]; then
   log_message "INFO: Escalating privileges to run the user creation playbook."
 fi
 
-if run_with_sudo ansible-playbook "$PLAYBOOK_PATH"; then
+if run_with_sudo "$ANSIBLE_PLAYBOOK_BIN" "$PLAYBOOK_PATH"; then
   log_message "SUCCESS: User bootstrap playbook applied successfully."
 else
   log_message "ERROR: Failed to apply user bootstrap playbook."

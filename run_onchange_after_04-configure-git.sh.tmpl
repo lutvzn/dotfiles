@@ -13,6 +13,24 @@ log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
+source_brew_environment() {
+  local brew_bin
+
+  for brew_bin in \
+    "/home/linuxbrew/.linuxbrew/bin/brew" \
+    "/opt/homebrew/bin/brew" \
+    "/usr/local/bin/brew"; do
+    if [ -x "$brew_bin" ]; then
+      eval "$("$brew_bin" shellenv)"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+source_brew_environment || true
+
 if ! command -v git >/dev/null 2>&1; then
   log_message "ERROR: git is not installed or not available in PATH."
   exit 1
