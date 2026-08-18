@@ -91,7 +91,16 @@ bindkey '^I' expand-or-complete
 bindkey '^F' fzf-completion
 
 # -----------------------------------------------------------------------------
-# 6. Aliases & Functions
+# 6. Zellij Autostart
+# -----------------------------------------------------------------------------
+
+# Start Zellij only for terminal sessions and avoid nesting sessions.
+if [[ -t 0 && -t 1 && -z "${ZELLIJ:-}" ]] && command -v zellij &>/dev/null; then
+  eval "$(zellij setup --generate-auto-start zsh)"
+fi
+
+# -----------------------------------------------------------------------------
+# 7. Aliases & Functions
 # -----------------------------------------------------------------------------
 
 # Modern replacements (eza for ls, ug for grep)

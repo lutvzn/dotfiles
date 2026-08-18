@@ -18,6 +18,7 @@ brew "ripgrep"
 brew "shellcheck"
 brew "starship"
 brew "ugrep"
+brew "zellij"
 brew "zoxide"
 
 # Install rslsync separately if you want the Resilio Sync user service enabled.
