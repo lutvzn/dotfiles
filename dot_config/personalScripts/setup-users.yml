@@ -7,6 +7,7 @@
   vars:
     managed_groups:
       - name: lutvzn
+        gid: 5997
     lutvzn_git_config_path: "{{ home_root }}/lutvzn/.gitconfig"
 
   pre_tasks:
@@ -46,6 +47,7 @@
       ansible.builtin.set_fact:
         managed_users:
           - name: lutvzn
+            uid: 5997
             group: lutvzn
             groups: []
             home: "{{ home_root }}/lutvzn"
@@ -95,12 +97,14 @@
     - name: Ensure groups exist
       ansible.builtin.group:
         name: "{{ item.name }}"
+        gid: "{{ item.gid }}"
         state: present
       loop: "{{ managed_groups }}"
 
     - name: Ensure users exist
       ansible.builtin.user:
         name: "{{ item.name }}"
+        uid: "{{ item.uid }}"
         group: "{{ item.group }}"
         groups: "{{ item.groups | join(',') }}"
         append: true
