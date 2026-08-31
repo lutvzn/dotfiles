@@ -1,5 +1,9 @@
 {{ if eq .chezmoi.os "windows" -}}
-fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
+$bunBin = Join-Path $HOME ".bun" "bin"
+if (Test-Path $bunBin) {
+    $env:BUN_INSTALL = Join-Path $HOME ".bun"
+    $env:PATH = "$bunBin;$env:PATH"
+}
 
 function .. { Set-Location .. }
 function ... { Set-Location ../.. }

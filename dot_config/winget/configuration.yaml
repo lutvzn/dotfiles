@@ -52,13 +52,6 @@ properties:
         id: Fastfetch-cli.Fastfetch
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
-      id: Fnm
-      directives:
-        description: Install fnm
-      settings:
-        id: Schniz.fnm
-        source: winget
-    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Fzf
       directives:
         description: Install fzf
