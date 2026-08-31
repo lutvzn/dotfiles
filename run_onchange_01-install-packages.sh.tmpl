@@ -68,4 +68,13 @@ else
     exit 1
   fi
 fi
+
+log_message "Installing/Updating opencode globally with bun..."
+
+if env HOME="$SOURCE_HOME" "$BUN_BIN" install -g opencode-ai; then
+  log_message "SUCCESS: opencode installed/updated successfully."
+else
+  log_message "ERROR: Failed to install opencode."
+  exit 1
+fi
 {{ end -}}
