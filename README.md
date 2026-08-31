@@ -1,5 +1,12 @@
 # Dotfiles
 
+On Linux, create the user with a fixed UID/GID first:
+
+```sh
+sudo groupadd -g 5997 lutvzn
+sudo useradd -m -u 5997 -g 5997 lutvzn
+```
+
 My personal dotfiles, managed with [chezmoi](https://www.chezmoi.io/).
 
 On Linux, CLI packages are installed from `~/.config/homebrew/Brewfile` via Homebrew during `chezmoi apply`.
