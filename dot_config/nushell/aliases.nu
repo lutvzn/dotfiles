@@ -12,6 +12,7 @@ alias lg = lazygit
 alias sctl = systemctl
 alias vim = nvim
 alias vi = nvim
+alias ocx = opencode
 
 def --wrapped cz [...rest] {
     ^chezmoi ...$rest

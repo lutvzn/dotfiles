@@ -36,6 +36,20 @@ is_ostree() {
     [ -d /sys/fs/ostree ] || [ -f /run/ostree-booted ]
 }
 
+confirm_proceed() {
+    printf '%s\n' \
+        "This script will:" \
+        "  1. Enable composefs and a transient root in /etc/ostree/prepare-root.conf." \
+        "  2. Run 'rpm-ostree initramfs-etc --reboot --track=/etc/ostree/prepare-root.conf'." \
+        "  3. REBOOT the system immediately."
+    printf 'Proceed? [y/N] '
+    read -r reply </dev/tty || reply=n
+    case "$reply" in
+        [Yy] | [Yy][Ee][Ss]) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 main() {
     temp_config=""
 
@@ -52,6 +66,11 @@ main() {
        grep -q "transient = true" /etc/ostree/prepare-root.conf; then
         log_message "/etc/ostree/prepare-root.conf is already configured. No changes needed."
         exit 0
+    fi
+
+    if ! confirm_proceed; then
+        log_message "Aborted by user. No changes were made."
+        exit 1
     fi
 
     # Configuration to enable composefs and set the root to transient

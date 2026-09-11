@@ -12,12 +12,17 @@ if status is-interactive
     # Prepend user bin directories
     fish_add_path ~/.local/bin ~/bin
 
+    # Bun
+    if test -d ~/.bun/bin
+        set -gx BUN_INSTALL $HOME/.bun
+        fish_add_path $HOME/.bun/bin
+    end
+
     # Tool Initialization
     if type -q zoxide; zoxide init fish | source; end
     if type -q starship; starship init fish | source; end
     if type -q atuin; atuin init fish | source; end
     if type -q fzf; fzf --fish | source; end
-    if type -q fnm; fnm env --use-on-cd --shell fish | source; end
 
     # Modern replacements (eza for ls, ug for grep)
     if type -q eza

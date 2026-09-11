@@ -4,8 +4,12 @@
 # 1. Global Definitions & Non-Interactive Check
 # -----------------------------------------------------------------------------
 
-# Source global definitions
-[ -f /etc/bashrc ] && . /etc/bashrc
+# Source global definitions (Debian/Ubuntu use /etc/bash.bashrc, Fedora/RHEL use /etc/bashrc)
+if [ -f /etc/bash.bashrc ]; then
+  . /etc/bash.bashrc
+elif [ -f /etc/bashrc ]; then
+  . /etc/bashrc
+fi
 
 # If not running interactively, don't do anything else
 [[ $- != *i* ]] && return
@@ -32,6 +36,12 @@ export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 # Cargo / Rust environment
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
+# Bun
+if [ -d "$HOME/.bun/bin" ]; then
+  export BUN_INSTALL="$HOME/.bun"
+  export PATH="$BUN_INSTALL/bin:$PATH"
+fi
+
 # -----------------------------------------------------------------------------
 # 3. Tool Initialization
 # -----------------------------------------------------------------------------
@@ -44,7 +54,6 @@ export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 [ "$(command -v starship)" ] && eval "$(starship init bash)"
 [ "$(command -v atuin)" ] && eval "$(atuin init bash)"
 [ "$(command -v fzf)" ] && eval "$(fzf --bash)"
-[ "$(command -v fnm)" ] && eval "$(fnm env --use-on-cd --shell bash)"
 
 # -----------------------------------------------------------------------------
 # 4. Aliases & Functions

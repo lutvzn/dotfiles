@@ -31,8 +31,13 @@ $env.PATH = (
         ($env.HOME | path join ".local" "bin")
         ($env.HOME | path join "bin")
         ($env.HOME | path join ".cargo" "bin")
+        ($env.HOME | path join ".bun" "bin")
     ]
     | where {|path| $path | path exists }
 )
 
 $env.PATH = ($env.PATH | uniq)
+
+if (($env.HOME | path join ".bun") | path exists) {
+    $env.BUN_INSTALL = ($env.HOME | path join ".bun")
+}

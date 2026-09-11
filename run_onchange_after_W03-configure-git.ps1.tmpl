@@ -1,5 +1,5 @@
 {{ if eq .chezmoi.os "windows" -}}
-# run_onchange_after_W03-configure-git.ps1.tmpl hash: {{ include "dot_config/personalScripts/setup-users.yml" | sha256sum }}
+# Winget configuration hash: {{ include "dot_config/winget/configuration.yaml" | sha256sum }}
 
 $logDir = Join-Path $HOME ".config\personalScripts\logs"
 $logFile = Join-Path $logDir "run_onchange_after_W03-configure-git.log"
