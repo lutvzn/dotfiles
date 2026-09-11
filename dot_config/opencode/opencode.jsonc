@@ -1,0 +1,67 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "compaction": {
+    "auto": true,
+    "keep": {
+      "tokens": 12000
+    },
+    "buffer": 20000
+  },
+
+  "warming": {
+    "prompt": "Do not perform any work. Reply with exactly: OK",
+    "interval": "9 minutes",
+    "duration": "30 minutes"
+  },
+
+  "model": "openai/gpt-5.6-sol",
+  "small_model": "openai/gpt-5.6-luna",
+  "default_agent": "build",
+
+  "agent": {
+    "explore-cheap": {
+      "description": "Search and understand the repository. Use for locating files, tracing references, and summarizing existing behavior. Do not modify code.",
+      "mode": "subagent",
+      "model": "openai/gpt-5.6-luna",
+      "prompt": "Explore the repository and return concise factual findings. Cite exact files, symbols, and relevant code locations. Do not propose architectural changes unless asked.",
+      "permission": {
+        "edit": "deny"
+      }
+    },
+
+    "implement-cheap": {
+      "description": "Make small, well-specified, localized code changes that follow existing project patterns.",
+      "mode": "subagent",
+      "model": "openai/gpt-5.6-luna",
+      "prompt": "Implement only the explicitly delegated change. Follow existing patterns. Avoid unrelated refactors. Run the narrowest relevant tests and report exactly what changed."
+    },
+
+    "tests-cheap": {
+      "description": "Add or update straightforward tests using established test patterns.",
+      "mode": "subagent",
+      "model": "openai/gpt-5.6-luna",
+      "prompt": "Write tests for explicitly stated behavior. Mirror existing test style. Do not change production behavior unless explicitly requested."
+    },
+
+    "review-strong": {
+      "description": "Review a completed change for correctness, regressions, architecture issues, missing tests, and security concerns.",
+      "mode": "subagent",
+      "model": "openai/gpt-5.6-sol",
+      "prompt": "Review critically. Prioritize correctness and concrete failure modes. Inspect the diff and surrounding code. Do not edit files.",
+      "permission": {
+        "edit": "deny"
+      }
+    }
+  },
+
+  "watcher": {
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      ".git/**",
+      "coverage/**"
+    ]
+  }
+}
