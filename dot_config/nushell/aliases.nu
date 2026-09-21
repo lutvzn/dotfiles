@@ -13,6 +13,7 @@ alias sctl = systemctl
 alias vim = nvim
 alias vi = nvim
 alias ocx = opencode
+alias ocy = opencode --yolo
 
 def --wrapped cz [...rest] {
     ^chezmoi ...$rest
