@@ -17,6 +17,42 @@ Set-Alias -Name cz -Value chezmoi
 function ocx { opencode @args }
 function ocy { opencode --yolo @args }
 
+# When an SSH session dies abruptly (dropped connection, kill, or an interrupted
+# full-screen app such as Zellij/vim/htop running inside the ssh session), the remote
+# side never gets to restore the terminal: we can be left on the alternate screen,
+# with mouse tracking or origin mode enabled, custom scroll margins, or a hidden
+# cursor. Reset-SshTerminal emits the recovery sequences for the host terminal; it
+# can also be called manually to repair a currently corrupted terminal.
+function Reset-SshTerminal {
+    # Only interactive console sessions; never touch redirected pipes or other hosts.
+    if ($Host.Name -ne 'ConsoleHost') { return }
+    if ([Console]::IsInputRedirected -or [Console]::IsOutputRedirected) { return }
+
+    $esc = [char]27
+    # Leave alternate screen (?1049l), disable mouse tracking (?1000l, ?1002l,
+    # ?1003l, and SGR encoding ?1006l), disable origin mode (?6l), reset scrolling
+    # margins (CSI r), show cursor (?25h), reset colors/attributes (SGR 0).
+    [Console]::Write("$esc[?1049l$esc[?1000l$esc[?1002l$esc[?1003l$esc[?1006l$esc[?6l$esc[r$esc[?25h$esc[0m")
+    # Redraw only after the margins are restored, so the full screen is not clipped
+    # to a stale scroll region.
+    Clear-Host
+}
+
+# Wrap ssh.exe (which runs completely unchanged) so a dropped Zellij/SSH
+# connection restores this terminal. Normal exits preserve their output.
+function ssh {
+    try {
+        ssh.exe @args
+        $sshExit = $LASTEXITCODE
+    }
+    finally {
+        # OpenSSH uses 255 for a connection error, including a dropped session.
+        if ($sshExit -eq 255) { Reset-SshTerminal }
+        # Preserve ssh.exe's exit code across the finally block.
+        if ($null -ne $sshExit) { $global:LASTEXITCODE = $sshExit }
+    }
+}
+
 if ((Get-Module -ListAvailable -Name PSReadLine) -and -not (Get-Module PSReadLine)) {
     Import-Module PSReadLine
 }
