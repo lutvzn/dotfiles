@@ -5,6 +5,10 @@ if (Test-Path $bunBin) {
     $env:PATH = "$bunBin;$env:PATH"
 }
 
+if (Get-Command fnm -ErrorAction SilentlyContinue) {
+    fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
+}
+
 function .. { Set-Location .. }
 function ... { Set-Location ../.. }
 function .... { Set-Location ../../.. }
