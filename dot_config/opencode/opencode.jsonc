@@ -15,7 +15,7 @@
     "duration": "30 minutes"
   },
 
-  "model": "openai/gpt-6-sol",
+  "model": "openai/gpt-6.1-sol",
   "small_model": "openai/gpt-6-luna",
   "default_agent": "build",
 
@@ -47,7 +47,7 @@
     "review-strong": {
       "description": "Review a completed change for correctness, regressions, architecture issues, missing tests, and security concerns.",
       "mode": "subagent",
-      "model": "zai-coding-plan/glm-5.3",
+      "model": "openai/gpt-6.1-sol",
       "prompt": "Review critically. Prioritize correctness and concrete failure modes. Inspect the diff and surrounding code. Do not edit files.",
       "permission": {
         "edit": "deny"
