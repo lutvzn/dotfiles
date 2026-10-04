@@ -1,4 +1,9 @@
-format = """$all"""
+format = "$os$username$hostname$container$all"
+
+[os]
+disabled = false
+format = "[$symbol$name]($style) "
+style = "bold white"
 
 [shell]
 disabled = false
@@ -8,8 +13,10 @@ show_always = true
 
 [hostname]
 ssh_only = false
-ssh_symbol = "ssh:"
-format = "on [$ssh_symbol$hostname]($style) "
+ssh_symbol = "🌐 SSH "
+trim_at = ""
+format = "on [ $ssh_symbol$hostname ]($style) "
+style = "bold white bg:blue"
 
 [character]
 success_symbol = "[>](bold green)"
