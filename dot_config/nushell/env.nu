@@ -31,6 +31,9 @@ $env.PATH = (
         ($env.HOME | path join ".local" "bin")
         ($env.HOME | path join "bin")
         ($env.HOME | path join ".cargo" "bin")
+        ($env.HOME | path join ".local" "share" "pi" "bin")
+        ($env.HOME | path join ".local" "share" "pi")
+        ($env.HOME | path join ".local" "share" "fnm")
         ($env.HOME | path join ".bun" "bin")
     ]
     | where {|path| $path | path exists }
@@ -40,4 +43,17 @@ $env.PATH = ($env.PATH | uniq)
 
 if (($env.HOME | path join ".bun") | path exists) {
     $env.BUN_INSTALL = ($env.HOME | path join ".bun")
+}
+
+# fnm has no native Nu shell output; load its JSON environment instead.
+if (which fnm | is-not-empty) {
+    let fnm_env = (^fnm env --json | from json)
+    load-env $fnm_env
+    let node_bin = if $nu.os-info.name == "windows" {
+        $fnm_env.FNM_MULTISHELL_PATH
+    } else {
+        $fnm_env.FNM_MULTISHELL_PATH | path join "bin"
+    }
+    $env.PATH = ($env.PATH | prepend $node_bin | uniq)
+    ^fnm use default --log-level quiet
 }

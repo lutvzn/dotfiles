@@ -32,6 +32,13 @@ if [ -d "$HOME/.bun/bin" ]; then
   export PATH="$BUN_INSTALL/bin:$PATH"
 fi
 
+# Pi has a stable user-local npm prefix independent of fnm's Node versions.
+export PATH="$HOME/.local/share/pi/bin:$HOME/.local/share/pi:$HOME/.local/share/fnm:$PATH"
+if command -v fnm >/dev/null 2>&1; then
+  eval "$(fnm env --shell zsh)"
+  fnm use default --log-level quiet
+fi
+
 # -----------------------------------------------------------------------------
 # 3. Zim Shell Modules
 # -----------------------------------------------------------------------------

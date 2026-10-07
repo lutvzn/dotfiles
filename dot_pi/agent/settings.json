@@ -1,0 +1,10 @@
+{
+  "defaultProvider": "openai",
+  "defaultModel": "gpt-6-luna",
+  "packages": [
+    "npm:pi-vimmode@0.9.0",
+    "npm:@ff-labs/pi-fff@0.11.0",
+    "npm:pi-web-search@1.6.0",
+    "npm:pi-blackhole@0.5.11"
+  ]
+}

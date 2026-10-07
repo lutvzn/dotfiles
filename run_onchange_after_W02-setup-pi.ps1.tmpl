@@ -1,0 +1,57 @@
+{{ if eq .chezmoi.os "windows" -}}
+# Pi settings hash: {{ include "dot_pi/agent/settings.json" | sha256sum }}
+$ErrorActionPreference = 'Stop'
+$piVersion = '1.0.4'
+$nodeVersion = '26'
+$logDir = Join-Path $HOME '.config/personalScripts/logs'
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+Start-Transcript -Path (Join-Path $logDir 'run_onchange_after_W02-setup-pi.log') -Append
+
+function Assert-NativeSuccess([string] $step) {
+    if ($LASTEXITCODE -ne 0) { throw "$step failed with exit code $LASTEXITCODE" }
+}
+
+try {
+    # Winget ran earlier in the same chezmoi process; refresh its PATH additions.
+    $env:PATH = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+        [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:PATH
+    if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
+        throw 'fnm was not found. Ensure the Winget configuration installed Schniz.fnm.'
+    }
+    $fnmEnv = fnm env --shell powershell | Out-String
+    Assert-NativeSuccess 'fnm env'
+    Invoke-Expression $fnmEnv
+    fnm install $nodeVersion
+    Assert-NativeSuccess 'fnm install'
+    fnm default $nodeVersion
+    Assert-NativeSuccess 'fnm default'
+    fnm use default
+    Assert-NativeSuccess 'fnm use'
+    node --version
+    Assert-NativeSuccess 'node'
+    npm.cmd --version
+    Assert-NativeSuccess 'npm'
+
+    # A stable user-local prefix, not the version-specific fnm global directory.
+    $piPrefix = Join-Path $HOME '.local/share/pi'
+    npm.cmd install --global --ignore-scripts --prefix $piPrefix "@earendil-works/pi-coding-agent@$piVersion"
+    Assert-NativeSuccess 'Pi installation'
+    $env:PATH = "$piPrefix;$env:PATH"
+    Push-Location $HOME
+    try {
+        & (Join-Path $piPrefix 'pi.cmd') update --extensions --no-approve
+        Assert-NativeSuccess 'Pi plugin reconciliation'
+        & (Join-Path $piPrefix 'pi.cmd') --version
+        Assert-NativeSuccess 'Pi version check'
+    } finally {
+        Pop-Location
+    }
+    Write-Host "SUCCESS: Node $nodeVersion is the fnm default; Pi and plugins installed."
+    Write-Host 'Open a new terminal, start pi, and use /login on a new machine.'
+} catch {
+    Write-Host "ERROR: $($_.Exception.Message)"
+    throw
+} finally {
+    Stop-Transcript
+}
+{{ end -}}

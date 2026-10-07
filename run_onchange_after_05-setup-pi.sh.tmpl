@@ -1,0 +1,54 @@
+{{ if or (eq .chezmoi.os "linux") (eq .chezmoi.os "darwin") -}}
+#!/bin/bash
+set -euo pipefail
+
+# Pi settings hash: {{ include "dot_pi/agent/settings.json" | sha256sum }}
+PI_VERSION="1.0.4"
+NODE_VERSION="26"
+export HOME="${ORIG_HOME:-$HOME}"
+LOG_DIR="$HOME/.config/personalScripts/logs"
+mkdir -p "$LOG_DIR"
+exec > >(tee -a "$LOG_DIR/run_onchange_after_05-setup-pi.log") 2>&1
+trap 'echo "$(date): ERROR: Pi setup failed at line $LINENO."' ERR
+
+echo "$(date): INFO: Setting up fnm, Node $NODE_VERSION, and Pi $PI_VERSION."
+for brew_bin in /home/linuxbrew/.linuxbrew/bin/brew /opt/homebrew/bin/brew /usr/local/bin/brew; do
+  if [ -x "$brew_bin" ]; then
+    eval "$("$brew_bin" shellenv)"
+    break
+  fi
+done
+export PATH="$HOME/.local/share/fnm:$PATH"
+if ! command -v fnm >/dev/null 2>&1; then
+  if command -v brew >/dev/null 2>&1; then
+    brew install fnm
+  else
+    # macOS can bootstrap fnm without installing Homebrew or system Node.
+    installer="$(mktemp)"
+    trap 'rm -f "$installer"' EXIT
+    curl -fsSL https://fnm.vercel.app/install -o "$installer"
+    bash "$installer" --skip-shell --install-dir "$HOME/.local/share/fnm"
+    rm -f "$installer"
+    trap - EXIT
+  fi
+fi
+
+fnm_env="$(fnm env --shell bash)"
+eval "$fnm_env"
+fnm install "$NODE_VERSION"
+fnm default "$NODE_VERSION"
+fnm use default
+node --version
+npm --version
+
+# A separate per-user prefix keeps Pi available when fnm changes Node versions.
+PI_PREFIX="$HOME/.local/share/pi"
+npm install --global --ignore-scripts --prefix "$PI_PREFIX" "@earendil-works/pi-coding-agent@$PI_VERSION"
+export PATH="$PI_PREFIX/bin:$PATH"
+# Reconcile global packages only; do not load or trust this working directory.
+cd "$HOME"
+"$PI_PREFIX/bin/pi" update --extensions --no-approve
+"$PI_PREFIX/bin/pi" --version
+echo "$(date): SUCCESS: Node $NODE_VERSION is the fnm default; Pi and plugins installed."
+echo "INFO: Open a new terminal, start pi, and use /login on a new machine."
+{{ end -}}

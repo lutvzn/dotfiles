@@ -59,6 +59,20 @@ properties:
         id: junegunn.fzf
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Fnm
+      directives:
+        description: Install fnm (Node versions are managed per user, not system-wide)
+      settings:
+        id: Schniz.fnm
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Git
+      directives:
+        description: Install Git for Windows including Git Bash for Pi
+      settings:
+        id: Git.Git
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: GitHubCLI
       directives:
         description: Install GitHub CLI

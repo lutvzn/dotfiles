@@ -130,6 +130,68 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 chezmoi apply -v
 ```
 
+## Pi and Node (Windows, Linux/WSL, macOS)
+
+Node is managed **per user with fnm**, not installed system-wide. During
+`chezmoi apply`, the Pi bootstrap installs Node **26**, sets `fnm default 26`,
+and selects that default before installing Pi **1.0.4** and the pinned plugins.
+Windows provisions `Schniz.fnm` and Git Bash through Winget. Linux provisions
+fnm through Homebrew. On macOS, the Pi bootstrap uses an existing Homebrew
+installation or the official fnm installer (without modifying shell profiles).
+The rest of the repository's Unix package provisioning remains Linux-only.
+For macOS without Homebrew, ensure `curl`, `unzip`, and Git are available first.
+
+Pi is installed with npm into a stable user-local prefix, `~/.local/share/pi`,
+independent of fnm's version-specific Node directories. Bash, Zsh, Fish,
+PowerShell, and Nushell initialize fnm and select its default at startup.
+Automatic directory-based Node switching is intentionally disabled so Node 26
+remains selected wherever you launch Pi; use `fnm use <version>` explicitly for
+projects needing another version. Open a new terminal after applying.
+WSL is a separate Linux installation: apply these dotfiles inside each distro.
+Non-interactive shells that skip profiles must initialize fnm explicitly.
+
+Managed Pi files:
+
+- `~/.pi/agent/settings.json`: provider/model defaults and pinned global plugins.
+- `~/.pi/agent/pi-blackhole/pi-blackhole-config.json`: Blackhole preferences.
+
+Only these configuration files are synced. Credentials, trust grants, sessions,
+model caches, installed packages, FFF databases, and Blackhole pending memory
+stay local. Applying chezmoi restores the managed preferences; changes made via
+Pi's UI should be copied back to the source configuration if you want to keep them.
+
+On a new machine, run `pi`, then `/login`. Verify with:
+
+```sh
+fnm current
+node --version
+pi --version
+pi list
+```
+
+In Pi, use `/fff-health`, `/blackhole-memory status`, and `/vimmode` to check
+plugin behavior. Try a web search using a supported authenticated model.
+Project trust is still prompted normally; the bootstrap does not approve projects.
+
+**Compatibility caveat:** the pinned Vim mode `0.9.0` and Blackhole `0.5.11`
+versions load in the current setup, but their declared Pi peer-version ranges do
+not cover Pi `1.0.4`. Fresh-machine and interactive compatibility still need
+verification. FFF uses native bindings and must be installed on each target OS,
+not copied from Windows. Blackhole memory workers remain enabled and use the
+configured OpenAI model, with session-model fallback; these calls can incur charges.
+
+Bootstrap logs:
+
+- Unix: `~/.config/personalScripts/logs/run_onchange_after_05-setup-pi.log`
+- Windows: `~/.config/personalScripts/logs/run_onchange_after_W02-setup-pi.log`
+
+Pi and plugin versions are intentionally pinned. To upgrade, update the Pi version
+in both bootstrap templates and the package versions in
+`dot_pi/agent/settings.json`, review `chezmoi diff`, then apply. Node 26 resolves
+to the latest available 26.x when the bootstrap runs; it is not automatically
+updated on every shell startup. After changing Node's default manually, rerun the
+bootstrap if you want to restore 26 as the default.
+
 ## Usage
 
 ### Adding new dotfiles

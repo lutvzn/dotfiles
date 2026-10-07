@@ -18,6 +18,13 @@ if status is-interactive
         fish_add_path $HOME/.bun/bin
     end
 
+    # Stable Pi prefix and fnm-managed default Node.
+    fish_add_path --move ~/.local/share/pi/bin ~/.local/share/pi ~/.local/share/fnm
+    if type -q fnm
+        fnm env --shell fish | source
+        fnm use default --log-level quiet
+    end
+
     # Tool Initialization
     if type -q zoxide; zoxide init fish | source; end
     if type -q starship; starship init fish | source; end
