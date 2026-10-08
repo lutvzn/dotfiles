@@ -21,4 +21,5 @@ brew "ugrep"
 brew "zellij"
 brew "zimfw"
 brew "zoxide"
+brew "rtk"
 
