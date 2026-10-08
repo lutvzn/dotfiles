@@ -1,10 +1,13 @@
 {
   "defaultProvider": "openai",
-  "defaultModel": "gpt-6-luna",
+  "defaultModel": "gpt-6.1-sol",
   "packages": [
     "npm:pi-vimmode@0.9.0",
     "npm:@ff-labs/pi-fff@0.11.0",
     "npm:pi-web-search@1.6.0",
-    "npm:pi-blackhole@0.5.11"
-  ]
+    "npm:pi-blackhole@0.5.11",
+    "npm:pi-token-speed"
+  ],
+  "lastChangelogVersion": "1.1.0",
+  "deviceId": "2d0063ed-4a02-4eb5-87f6-3c799363578f"
 }
