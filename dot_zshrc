@@ -110,7 +110,7 @@ bindkey '^F' fzf-completion
 # standard auto-start behavior for local terminals and avoid nested sessions.
 if [[ -t 0 && -t 1 && -z "${ZELLIJ:-}" ]] && command -v zellij &>/dev/null; then
   if [[ -n "${SSH_CONNECTION:-}" ]]; then
-    exec zellij attach --create ssh
+    exec zellij --layout compact attach --create ssh
   else
     eval "$(zellij setup --generate-auto-start zsh)"
   fi
