@@ -2,6 +2,7 @@
 
 brew "ansible"
 brew "atuin"
+brew "bitwarden-cli"
 brew "chezmoi"
 brew "eza"
 brew "fastfetch"
