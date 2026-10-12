@@ -1,0 +1,7 @@
+#!/bin/sh
+# Check without initializing fnm or changing the caller's environment.
+if ! command -v node >/dev/null 2>&1; then
+    printf '%s\n' '[FAIL] Node is not on PATH. Apply provisioning and open a new terminal.' >&2
+    exit 1
+fi
+exec node "$HOME/.config/personalScripts/dotfiles-doctor.cjs" "$@"

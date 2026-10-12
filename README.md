@@ -192,6 +192,41 @@ to the latest available 26.x when the bootstrap runs; it is not automatically
 updated on every shell startup. After changing Node's default manually, rerun the
 bootstrap if you want to restore 26 as the default.
 
+## Dotfiles Doctor
+
+After applying and opening a new terminal, run:
+
+```sh
+dotfiles-doctor
+```
+
+Works in PowerShell/cmd on Windows and Bash, Zsh, Fish, or Nushell on Unix.
+The command checks required tools (`chezmoi`, Git, fnm, Node, npm, Pi), Node 26
+and fnm's default/current versions, the stable Pi prefix, configured npm plugin
+versions, and multiple installations on PATH. Pi's declared plugin peer ranges
+are displayed for manual review, not automatically evaluated.
+
+This is read-only: no installs, network requests, authentication, config changes,
+or shell initialization. It does not read credentials or sessions, and it does
+not replace interactive plugin testing. Exit code is **1** for failed checks and
+**0** otherwise; warnings alone do not fail the command.
+
+The doctor itself needs Node. If Node is missing, its launcher reports that
+problem and exits. To check a fresh machine before Node is available, use
+`chezmoi doctor`. For file drift, use `chezmoi verify` separately.
+
+Direct invocation (including shells without profile loading):
+
+```sh
+node ~/.config/personalScripts/dotfiles-doctor.cjs
+```
+
+On PowerShell:
+
+```powershell
+node "$HOME/.config/personalScripts/dotfiles-doctor.cjs"
+```
+
 ## Usage
 
 ### Adding new dotfiles

@@ -7,7 +7,8 @@ if (Test-Path $bunBin) {
 
 # Stable user-local Pi prefix, independent of fnm's Node installation directories.
 $piPrefix = Join-Path $HOME ".local/share/pi"
-$env:PATH = "$piPrefix;$env:PATH"
+$localBin = Join-Path $HOME ".local/bin"
+$env:PATH = "$localBin;$piPrefix;$env:PATH"
 
 if (Get-Command fnm -ErrorAction SilentlyContinue) {
     fnm env --shell powershell | Out-String | Invoke-Expression
