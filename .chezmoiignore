@@ -1,5 +1,6 @@
 AGENTS.md
 README.md
+.pi/agent/extensions/rtk.ts
 
 {{- if ne .chezmoi.os "windows" }}
 Documents/PowerShell
