@@ -150,6 +150,18 @@ projects needing another version. Open a new terminal after applying.
 WSL is a separate Linux installation: apply these dotfiles inside each distro.
 Non-interactive shells that skip profiles must initialize fnm explicitly.
 
+On Windows, PowerShell startup and the Pi bootstrap run `Repair-Fnm -Default`
+to ensure the fnm default is installed and working. With no managed default,
+it installs Node 26 and sets that default. The check executes JavaScript with
+Node and verifies npm/npx can run, as well as checking their launchers. Missing
+or broken installations are repaired from a clean download of the exact same
+Node version, preserving aliases and unrelated global packages. A healthy
+`node.exe` is never replaced. Healthy startups require no downloads. Repairs
+are logged to `~/.config/personalScripts/logs/Repair-Fnm.log`; failures produce
+a startup warning rather than preventing the shell from opening. If Windows
+locks a broken executable, close processes using it and retry. After manually
+switching versions with `fnm use`, run `Repair-Fnm` to check that version.
+
 Managed Pi files:
 
 - `~/.pi/agent/settings.json`: provider/model defaults and pinned global plugins.

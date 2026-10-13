@@ -12,7 +12,17 @@ $env:PATH = "$localBin;$piPrefix;$env:PATH"
 
 if (Get-Command fnm -ErrorAction SilentlyContinue) {
     fnm env --shell powershell | Out-String | Invoke-Expression
-    fnm use default --log-level quiet
+    $fnmRepair = Join-Path $HOME '.config/personalScripts/Repair-Fnm.ps1'
+    if (Test-Path -LiteralPath $fnmRepair) {
+        try {
+            . $fnmRepair
+            Repair-Fnm -Default
+        } catch {
+            Write-Warning "fnm repair failed: $($_.Exception.Message). See ~/.config/personalScripts/logs/Repair-Fnm.log"
+        }
+    } else {
+        fnm use default --log-level quiet
+    }
 }
 
 function .. { Set-Location .. }
