@@ -2,7 +2,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Pi settings hash: {{ include "dot_pi/agent/settings.json" | sha256sum }}
+# Pi settings hash: {{ include ".chezmoitemplates/pi-settings.json" | sha256sum }}
 PI_VERSION="1.0.4"
 NODE_VERSION="26"
 export HOME="${ORIG_HOME:-$HOME}"

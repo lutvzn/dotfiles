@@ -75,6 +75,9 @@ PROMPT='%F{green}%n@%m%f %F{cyan}%~%f
 [ "$(command -v zoxide)" ] && eval "$(zoxide init zsh)"
 [ "$(command -v starship)" ] && eval "$(starship init zsh)"
 [ "$(command -v atuin)" ] && eval "$(atuin init zsh)"
+
+# Bun completions (needs compinit from Zim above)
+[ -s "$HOME/.bun/_bun" ] && . "$HOME/.bun/_bun"
 [ "$(command -v fzf)" ] && source <(fzf --zsh)
 
 # Use Bash/readline-style line editing and make navigation keys consistent

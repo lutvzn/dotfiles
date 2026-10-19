@@ -1,0 +1,8 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* Merge managed keys over Pi's local state (deviceId, lastChangelogVersion, ...). */ -}}
+{{- $current := dict -}}
+{{- if trim .chezmoi.stdin -}}
+{{-   $current = fromJson .chezmoi.stdin -}}
+{{- end -}}
+{{- $managed := includeTemplate "pi-settings.json" . | fromJson -}}
+{{- mergeOverwrite $current $managed | toPrettyJson "  " -}}

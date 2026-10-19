@@ -164,7 +164,9 @@ switching versions with `fnm use`, run `Repair-Fnm` to check that version.
 
 Managed Pi files:
 
-- `~/.pi/agent/settings.json`: provider/model defaults and pinned global plugins.
+- `~/.pi/agent/settings.json`: provider/model defaults and pinned global plugins,
+  merged from `.chezmoitemplates/pi-settings.json`; keys Pi writes itself
+  (such as `deviceId`) stay local to each machine.
 - `~/.pi/agent/pi-blackhole/pi-blackhole-config.json`: Blackhole preferences.
 
 Only these configuration files are synced. Credentials, trust grants, sessions,
@@ -199,7 +201,7 @@ Bootstrap logs:
 
 Pi and plugin versions are intentionally pinned. To upgrade, update the Pi version
 in both bootstrap templates and the package versions in
-`dot_pi/agent/settings.json`, review `chezmoi diff`, then apply. Node 26 resolves
+`.chezmoitemplates/pi-settings.json`, review `chezmoi diff`, then apply. Node 26 resolves
 to the latest available 26.x when the bootstrap runs; it is not automatically
 updated on every shell startup. After changing Node's default manually, rerun the
 bootstrap if you want to restore 26 as the default.
