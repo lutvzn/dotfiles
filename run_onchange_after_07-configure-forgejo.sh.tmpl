@@ -1,0 +1,171 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+# Logs tea into Forgejo with a token stored in Bitwarden and makes git use it,
+# so HTTPS pushes to git.lct.st work as soon as chezmoi apply finishes.
+
+LOG_HOME="${ORIG_HOME:-$HOME}"
+LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_onchange_after_07-configure-forgejo.log"
+FORGEJO_URL="https://git.lct.st"
+TEA_LOGIN_NAME="git.lct.st"
+BW_SERVER="https://vault.lct.st"
+BW_ITEM="git.lct.st access token"
+
+mkdir -p "$LOG_DIR"
+
+log_message() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+source_brew_environment() {
+  local brew_bin
+
+  for brew_bin in \
+    "/home/linuxbrew/.linuxbrew/bin/brew" \
+    "/opt/homebrew/bin/brew" \
+    "/usr/local/bin/brew"; do
+    if [ -x "$brew_bin" ]; then
+      eval "$("$brew_bin" shellenv)"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+configure_git_helper() {
+  git config --global --unset-all "credential.$FORGEJO_URL.helper" || true
+
+  if git config --global --add "credential.$FORGEJO_URL.helper" "" \
+    && git config --global --add "credential.$FORGEJO_URL.helper" "!$TEA_BIN login helper"; then
+    log_message "SUCCESS: git uses tea for $FORGEJO_URL credentials."
+  else
+    log_message "ERROR: Failed to configure the git credential helper for $FORGEJO_URL."
+    exit 1
+  fi
+}
+
+# Checks the token git will receive from tea against the Forgejo API.
+# The header goes through stdin so the token never appears in the process list.
+tea_login_works() {
+  local token
+
+  token="$(printf 'protocol=https\nhost=%s\n\n' "${FORGEJO_URL#https://}" \
+    | "$TEA_BIN" login helper get 2>/dev/null | sed -n 's/^password=//p')"
+  [ -n "$token" ] \
+    && printf 'Authorization: token %s\n' "$token" \
+      | curl -fsS -o /dev/null -H @- "$FORGEJO_URL/api/v1/user"
+}
+
+# Reads a secret from the terminal into REPLY, echoing * for each character.
+read_masked() {
+  local char
+
+  REPLY=""
+  printf '%s' "$1" >/dev/tty
+  while IFS= read -r -s -n 1 char </dev/tty; do
+    [ -z "$char" ] && break
+    if [ "$char" = $'\x7f' ] || [ "$char" = $'\b' ]; then
+      if [ -n "$REPLY" ]; then
+        REPLY="${REPLY%?}"
+        printf '\b \b' >/dev/tty
+      fi
+      continue
+    fi
+    REPLY+="$char"
+    printf '*' >/dev/tty
+  done
+  printf '\n' >/dev/tty
+}
+
+# Runs a bw command that needs the master password, allowing three attempts.
+# The password is passed via --passwordenv so it never appears in the process list.
+bw_with_password() {
+  local attempt
+
+  for attempt in 1 2 3; do
+    read_masked "Bitwarden master password: "
+    if BW_SESSION="$(BW_PASSWORD="$REPLY" bw "$@" --passwordenv BW_PASSWORD --raw)"; then
+      REPLY=""
+      return 0
+    fi
+    REPLY=""
+    log_message "INFO: Bitwarden rejected the password (attempt $attempt of 3)."
+  done
+
+  return 1
+}
+
+source_brew_environment || true
+
+for command in git curl tea bw; do
+  if ! command -v "$command" >/dev/null 2>&1; then
+    log_message "ERROR: $command is not installed or not available in PATH."
+    exit 1
+  fi
+done
+
+TEA_BIN="$(command -v tea)"
+
+if tea_login_works; then
+  log_message "INFO: tea is already logged in to $FORGEJO_URL."
+  configure_git_helper
+  exit 0
+fi
+
+# A stale login (revoked token) would block re-adding it under the same name.
+"$TEA_BIN" login delete "$TEA_LOGIN_NAME" >/dev/null 2>&1 || true
+
+BW_STATUS="$(bw status 2>/dev/null)"
+BW_LOCKED_BY_SCRIPT=false
+
+if [ -n "${BW_SESSION:-}" ] && echo "$BW_STATUS" | grep -q '"status":"unlocked"'; then
+  log_message "INFO: Using the unlocked Bitwarden session from BW_SESSION."
+elif [ ! -t 0 ]; then
+  log_message "ERROR: Bitwarden is not unlocked and there is no terminal to prompt in. Export BW_SESSION and re-run chezmoi apply."
+  exit 1
+elif echo "$BW_STATUS" | grep -q '"status":"unauthenticated"'; then
+  if ! echo "$BW_STATUS" | grep -q "\"serverUrl\":\"$BW_SERVER\""; then
+    bw config server "$BW_SERVER" >/dev/null
+  fi
+
+  log_message "INFO: Logging in to Bitwarden at $BW_SERVER to fetch the Forgejo token."
+  read -r -p "Bitwarden email: " BW_EMAIL </dev/tty
+  if ! bw_with_password login "$BW_EMAIL"; then
+    log_message "ERROR: Bitwarden login failed."
+    exit 1
+  fi
+  BW_LOCKED_BY_SCRIPT=true
+else
+  log_message "INFO: Unlocking Bitwarden to fetch the Forgejo token."
+  if ! bw_with_password unlock; then
+    log_message "ERROR: Bitwarden unlock failed."
+    exit 1
+  fi
+  BW_LOCKED_BY_SCRIPT=true
+fi
+
+export BW_SESSION
+bw sync >/dev/null 2>&1 || log_message "INFO: Bitwarden sync failed; using the cached vault."
+
+if ! GITEA_SERVER_TOKEN="$(bw get password "$BW_ITEM")" || [ -z "$GITEA_SERVER_TOKEN" ]; then
+  log_message "ERROR: Could not read the password of Bitwarden item '$BW_ITEM'."
+  [ "$BW_LOCKED_BY_SCRIPT" = true ] && bw lock >/dev/null 2>&1
+  exit 1
+fi
+
+[ "$BW_LOCKED_BY_SCRIPT" = true ] && bw lock >/dev/null 2>&1
+
+# Passed through the environment so the token never appears in the process list.
+if GITEA_SERVER_TOKEN="$GITEA_SERVER_TOKEN" "$TEA_BIN" login add \
+  --name "$TEA_LOGIN_NAME" --url "$FORGEJO_URL" >/dev/null \
+  && tea_login_works; then
+  log_message "SUCCESS: tea is logged in to $FORGEJO_URL as $("$TEA_BIN" login list --output csv | awk -F, -v name="$TEA_LOGIN_NAME" '$1 == name { print $4 }')."
+else
+  log_message "ERROR: tea could not log in to $FORGEJO_URL with the token from '$BW_ITEM'."
+  exit 1
+fi
+
+configure_git_helper
+{{ end -}}

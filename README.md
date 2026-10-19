@@ -206,6 +206,47 @@ to the latest available 26.x when the bootstrap runs; it is not automatically
 updated on every shell startup. After changing Node's default manually, rerun the
 bootstrap if you want to restore 26 as the default.
 
+## NetBird
+
+Vaultwarden (`https://vault.lct.st`) is only reachable over NetBird, so
+`run_onchange_after_06-setup-netbird.sh` (Linux) and
+`run_onchange_after_W04-setup-netbird.ps1` (Windows) run before the Forgejo
+login. On Linux the script installs NetBird with the official installer
+(`https://pkgs.netbird.io/install.sh`); Windows installs it through Winget.
+Both then run `netbird up`: open the printed URL (or the browser window) to
+approve the machine, or export `NB_SETUP_KEY` beforehand to join unattended.
+The script waits up to 60 seconds for Vaultwarden to answer and fails otherwise,
+which stops `chezmoi apply` before the Forgejo login.
+
+On rpm-ostree systems NetBird is layered into the next deployment: reboot and
+re-run `chezmoi apply`. Logs: `~/.config/personalScripts/logs/run_onchange_after_06-setup-netbird.log`
+(Windows: `run_onchange_after_W04-setup-netbird.log`).
+
+## Forgejo (git.lct.st)
+
+After provisioning, `run_onchange_after_07-configure-forgejo.sh` (Linux) and
+`run_onchange_after_W05-configure-forgejo.ps1` (Windows) log `tea` in to
+`https://git.lct.st` and register it as git's credential helper for that host,
+so HTTPS pushes work as soon as `chezmoi apply` finishes.
+
+The token comes from Bitwarden (Vaultwarden at `https://vault.lct.st`):
+
+1. In Forgejo, create an access token under Settings → Applications with
+   `write:repository`, `write:issue`, `read:user`, and `read:organization`.
+2. Store it as the **password** of a Bitwarden item named
+   `git.lct.st access token`.
+
+During apply, the script logs in to or unlocks Bitwarden (prompting for your
+master password), reads the token, locks the vault again, and runs
+`tea login add`. To run unattended, export an unlocked `BW_SESSION` first.
+The token is saved by tea in `~/.config/tea/config.yml`; it is never stored in
+this repository. Logs: `~/.config/personalScripts/logs/run_onchange_after_07-configure-forgejo.log`
+(Windows: `run_onchange_after_W05-configure-forgejo.log`).
+
+Commits use the same git email as GitHub. Add
+`106083845+lutvzn@users.noreply.github.com` as an email on your Forgejo
+account so pushed commits link to it.
+
 ## Dotfiles Doctor
 
 After applying and opening a new terminal, run:

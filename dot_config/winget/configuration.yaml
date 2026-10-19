@@ -17,6 +17,13 @@ properties:
         id: Oven-sh.Bun
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: BitwardenCLI
+      directives:
+        description: Install Bitwarden CLI
+      settings:
+        id: Bitwarden.CLI
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Chezmoi
       directives:
         description: Install Chezmoi
@@ -101,6 +108,13 @@ properties:
         id: Neovim.Neovim
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Netbird
+      directives:
+        description: Install NetBird (Vaultwarden is only reachable over it)
+      settings:
+        id: Netbird.Netbird
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: WinLibs
       directives:
         description: Install the C compiler required by nvim-treesitter
@@ -148,6 +162,13 @@ properties:
         description: Install Starship
       settings:
         id: Starship.Starship
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Tea
+      directives:
+        description: Install tea (Forgejo/Gitea CLI)
+      settings:
+        id: Gitea.tea
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Ugrep

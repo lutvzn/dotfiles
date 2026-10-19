@@ -1,0 +1,159 @@
+{{ if eq .chezmoi.os "windows" -}}
+# Logs tea into Forgejo with a token stored in Bitwarden and makes git use it,
+# so HTTPS pushes to git.lct.st work as soon as chezmoi apply finishes.
+
+$forgejoUrl = "https://git.lct.st"
+$teaLoginName = "git.lct.st"
+$bwServer = "https://vault.lct.st"
+$bwItem = "git.lct.st access token"
+
+$logDir = Join-Path $HOME ".config\personalScripts\logs"
+$logFile = Join-Path $logDir "run_onchange_after_W05-configure-forgejo.log"
+
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+function Write-Log {
+    param(
+        [string]$Message
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $entry = "$timestamp - $Message"
+    Write-Host $entry
+    Add-Content -Path $logFile -Value $entry
+}
+
+# Checks the token git will receive from tea against the Forgejo API.
+function Test-TeaLogin {
+    $hostName = $forgejoUrl -replace '^https://', ''
+    $credential = "protocol=https`nhost=$hostName`n`n" | tea login helper get 2>$null
+    $token = ($credential | Where-Object { $_ -like 'password=*' }) -replace '^password=', ''
+    if (-not $token) { return $false }
+
+    try {
+        Invoke-RestMethod -Uri "$forgejoUrl/api/v1/user" -Headers @{ Authorization = "token $token" } | Out-Null
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+# Runs a bw command that needs the master password, allowing three attempts.
+# Read-Host masks input with *; --passwordenv keeps it out of the process list.
+function Invoke-BwWithPassword {
+    param(
+        [string[]]$Arguments
+    )
+
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        $secure = Read-Host -Prompt "Bitwarden master password" -AsSecureString
+        $env:BW_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(
+            [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
+        $session = bw @Arguments --passwordenv BW_PASSWORD --raw
+        $bwExitCode = $LASTEXITCODE
+        Remove-Item Env:BW_PASSWORD
+
+        if ($bwExitCode -eq 0 -and $session) {
+            $env:BW_SESSION = $session
+            return $true
+        }
+        Write-Log "Bitwarden rejected the password (attempt $attempt of 3)."
+    }
+
+    return $false
+}
+
+function Set-GitHelper {
+    git config --global --unset-all "credential.$forgejoUrl.helper" 2>$null
+    git config --global --add "credential.$forgejoUrl.helper" ""
+    if ($LASTEXITCODE -ne 0) {
+        Write-Log "ERROR: Failed to add $forgejoUrl credential reset helper."
+        exit 1
+    }
+
+    git config --global --add "credential.$forgejoUrl.helper" "!tea login helper"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Log "ERROR: Failed to add $forgejoUrl tea credential helper."
+        exit 1
+    }
+
+    Write-Log "SUCCESS: git uses tea for $forgejoUrl credentials."
+}
+
+# Winget ran earlier in the same chezmoi process; refresh its PATH additions.
+$env:PATH = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+    [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:PATH
+
+foreach ($command in @("git", "tea", "bw")) {
+    if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
+        Write-Log "ERROR: $command is not installed or not available in PATH."
+        exit 1
+    }
+}
+
+if (Test-TeaLogin) {
+    Write-Log "tea is already logged in to $forgejoUrl."
+    Set-GitHelper
+    exit 0
+}
+
+# A stale login (revoked token) would block re-adding it under the same name.
+tea login delete $teaLoginName 2>$null | Out-Null
+
+$bwStatus = bw status | ConvertFrom-Json
+$lockedByScript = $false
+
+if ($env:BW_SESSION -and $bwStatus.status -eq "unlocked") {
+    Write-Log "Using the unlocked Bitwarden session from BW_SESSION."
+} elseif ($bwStatus.status -eq "unauthenticated") {
+    if ($bwStatus.serverUrl -ne $bwServer) {
+        bw config server $bwServer | Out-Null
+    }
+
+    Write-Log "Logging in to Bitwarden at $bwServer to fetch the Forgejo token."
+    $bwEmail = Read-Host -Prompt "Bitwarden email"
+    if (-not (Invoke-BwWithPassword @("login", $bwEmail))) {
+        Write-Log "ERROR: Bitwarden login failed."
+        exit 1
+    }
+    $lockedByScript = $true
+} else {
+    Write-Log "Unlocking Bitwarden to fetch the Forgejo token."
+    if (-not (Invoke-BwWithPassword @("unlock"))) {
+        Write-Log "ERROR: Bitwarden unlock failed."
+        exit 1
+    }
+    $lockedByScript = $true
+}
+
+bw sync 2>$null | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "Bitwarden sync failed; using the cached vault."
+}
+
+$token = bw get password $bwItem
+$bwExitCode = $LASTEXITCODE
+if ($lockedByScript) {
+    bw lock 2>$null | Out-Null
+    Remove-Item Env:BW_SESSION
+}
+
+if ($bwExitCode -ne 0 -or -not $token) {
+    Write-Log "ERROR: Could not read the password of Bitwarden item '$bwItem'."
+    exit 1
+}
+
+# Passed through the environment so the token never appears in the process list.
+$env:GITEA_SERVER_TOKEN = $token
+tea login add --name $teaLoginName --url $forgejoUrl | Out-Null
+$teaExitCode = $LASTEXITCODE
+Remove-Item Env:GITEA_SERVER_TOKEN
+
+if ($teaExitCode -ne 0 -or -not (Test-TeaLogin)) {
+    Write-Log "ERROR: tea could not log in to $forgejoUrl with the token from '$bwItem'."
+    exit 1
+}
+
+Write-Log "SUCCESS: tea is logged in to $forgejoUrl."
+Set-GitHelper
+{{ end -}}

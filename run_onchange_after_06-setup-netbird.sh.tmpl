@@ -1,0 +1,123 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+# Installs NetBird and connects this machine, so Vaultwarden (vault.lct.st,
+# reachable only over NetBird) is available to the Forgejo login that follows.
+# Export NB_SETUP_KEY to join with a setup key instead of the SSO browser login.
+
+LOG_HOME="${ORIG_HOME:-$HOME}"
+LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_onchange_after_06-setup-netbird.log"
+VAULT_URL="https://vault.lct.st"
+VAULT_WAIT_SECONDS=60
+PRIVILEGED_PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+
+mkdir -p "$LOG_DIR"
+
+log_message() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+run_with_sudo() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+    return
+  fi
+
+  if command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+    return
+  fi
+
+  if command -v run0 >/dev/null 2>&1; then
+    run0 /usr/bin/env "PATH=$PRIVILEGED_PATH" "$@"
+    return
+  fi
+
+  log_message "ERROR: sudo or run0 is required to install NetBird."
+  exit 1
+}
+
+netbird_connected() {
+  netbird status 2>/dev/null | grep -q 'Management: Connected'
+}
+
+install_netbird() {
+  local installer
+
+  installer="$(mktemp "${TMPDIR:-/tmp}/netbird-install.XXXXXX")"
+  log_message "INFO: Downloading the NetBird installer."
+
+  if ! curl -fsSL https://pkgs.netbird.io/install.sh -o "$installer"; then
+    log_message "ERROR: Failed to download the NetBird installer."
+    rm -f "$installer"
+    exit 1
+  fi
+
+  log_message "INFO: Installing NetBird with the official installer."
+
+  # sudo drops XDG_CURRENT_DESKTOP, which the installer uses to decide on the UI.
+  if ! run_with_sudo env "XDG_CURRENT_DESKTOP=${XDG_CURRENT_DESKTOP:-}" /bin/sh "$installer"; then
+    log_message "ERROR: NetBird installer exited with a failure status."
+    rm -f "$installer"
+    exit 1
+  fi
+  rm -f "$installer"
+
+  if ! command -v netbird >/dev/null 2>&1; then
+    # rpm-ostree layers the package into the next deployment.
+    log_message "INFO: NetBird is staged but not yet available. Reboot and re-run chezmoi apply."
+    exit 1
+  fi
+
+  run_with_sudo netbird service install >/dev/null 2>&1 || true
+  run_with_sudo netbird service start >/dev/null 2>&1 || true
+  log_message "SUCCESS: NetBird is installed at $(command -v netbird)."
+}
+
+if ! command -v curl >/dev/null 2>&1; then
+  log_message "ERROR: curl is not installed or not available in PATH."
+  exit 1
+fi
+
+if command -v netbird >/dev/null 2>&1; then
+  log_message "INFO: NetBird is already installed at $(command -v netbird)."
+else
+  install_netbird
+fi
+
+if netbird_connected; then
+  log_message "INFO: NetBird is already connected."
+else
+  if [ -n "${NB_SETUP_KEY:-}" ]; then
+    log_message "INFO: Connecting NetBird with the setup key from NB_SETUP_KEY."
+  else
+    log_message "INFO: Connecting NetBird. Open the login URL below to approve this machine."
+  fi
+
+  # netbird up reads NB_SETUP_KEY from the environment when it is set.
+  if ! netbird up; then
+    log_message "ERROR: netbird up failed."
+    exit 1
+  fi
+
+  if ! netbird_connected; then
+    log_message "ERROR: NetBird did not connect to its management server."
+    exit 1
+  fi
+  log_message "SUCCESS: NetBird is connected as $(netbird status 2>/dev/null | sed -n 's/^FQDN: //p')."
+fi
+
+log_message "INFO: Waiting up to ${VAULT_WAIT_SECONDS}s for $VAULT_URL to become reachable."
+deadline=$((SECONDS + VAULT_WAIT_SECONDS))
+while [ "$SECONDS" -lt "$deadline" ]; do
+  if curl -fsS -o /dev/null --max-time 5 "$VAULT_URL/alive" 2>/dev/null; then
+    log_message "SUCCESS: $VAULT_URL is reachable over NetBird."
+    exit 0
+  fi
+  sleep 5
+done
+
+log_message "ERROR: $VAULT_URL is not reachable. Check the NetBird DNS record and network route for it in the NetBird dashboard."
+exit 1
+{{ end -}}

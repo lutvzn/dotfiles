@@ -1,0 +1,70 @@
+{{ if eq .chezmoi.os "windows" -}}
+# Connects NetBird (installed by Winget), so Vaultwarden (vault.lct.st,
+# reachable only over NetBird) is available to the Forgejo login that follows.
+# Set NB_SETUP_KEY to join with a setup key instead of the SSO browser login.
+
+$vaultUrl = "https://vault.lct.st"
+$vaultWaitSeconds = 60
+
+$logDir = Join-Path $HOME ".config\personalScripts\logs"
+$logFile = Join-Path $logDir "run_onchange_after_W04-setup-netbird.log"
+
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+function Write-Log {
+    param(
+        [string]$Message
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $entry = "$timestamp - $Message"
+    Write-Host $entry
+    Add-Content -Path $logFile -Value $entry
+}
+
+function Test-NetbirdConnected {
+    (netbird status 2>$null | Out-String) -match 'Management: Connected'
+}
+
+# Winget ran earlier in the same chezmoi process; refresh its PATH additions.
+$env:PATH = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+    [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:PATH
+
+if (-not (Get-Command netbird -ErrorAction SilentlyContinue)) {
+    Write-Log "ERROR: netbird is not installed or not available in PATH. Ensure the Winget configuration installed Netbird.Netbird."
+    exit 1
+}
+
+if (Test-NetbirdConnected) {
+    Write-Log "NetBird is already connected."
+} else {
+    if ($env:NB_SETUP_KEY) {
+        Write-Log "Connecting NetBird with the setup key from NB_SETUP_KEY."
+    } else {
+        Write-Log "Connecting NetBird. Approve this machine in the browser window that opens."
+    }
+
+    # netbird up reads NB_SETUP_KEY from the environment when it is set.
+    netbird up
+    if ($LASTEXITCODE -ne 0 -or -not (Test-NetbirdConnected)) {
+        Write-Log "ERROR: NetBird did not connect to its management server."
+        exit 1
+    }
+    Write-Log "SUCCESS: NetBird is connected."
+}
+
+Write-Log "Waiting up to ${vaultWaitSeconds}s for $vaultUrl to become reachable."
+$deadline = (Get-Date).AddSeconds($vaultWaitSeconds)
+while ((Get-Date) -lt $deadline) {
+    try {
+        Invoke-WebRequest -Uri "$vaultUrl/alive" -UseBasicParsing -TimeoutSec 5 | Out-Null
+        Write-Log "SUCCESS: $vaultUrl is reachable over NetBird."
+        exit 0
+    } catch {
+        Start-Sleep -Seconds 5
+    }
+}
+
+Write-Log "ERROR: $vaultUrl is not reachable. Check the NetBird DNS record and network route for it in the NetBird dashboard."
+exit 1
+{{ end -}}
