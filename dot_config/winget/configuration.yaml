@@ -129,6 +129,13 @@ properties:
         id: BurntSushi.ripgrep.MSVC
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: Rtk
+      directives:
+        description: Install rtk
+      settings:
+        id: rtk-ai.rtk
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Shellcheck
       directives:
         description: Install Shellcheck

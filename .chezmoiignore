@@ -1,6 +1,5 @@
 AGENTS.md
 README.md
-.pi/agent/extensions/rtk.ts
 
 {{- if eq .chezmoi.os "windows" }}
 .local/bin/dotfiles-doctor
