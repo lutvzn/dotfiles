@@ -1,6 +1,5 @@
 {{ if eq .chezmoi.os "windows" -}}
 # Pi settings hash: {{ include ".chezmoitemplates/pi-settings.json" | sha256sum }}
-# fnm repair hash: {{ include "dot_config/personalScripts/Repair-Fnm.ps1" | sha256sum }}
 $ErrorActionPreference = 'Stop'
 $piVersion = '1.0.4'
 $nodeVersion = '26'
@@ -26,8 +25,8 @@ try {
     Assert-NativeSuccess 'fnm install'
     fnm default $nodeVersion
     Assert-NativeSuccess 'fnm default'
-    . (Join-Path $HOME '.config/personalScripts/Repair-Fnm.ps1')
-    Repair-Fnm -Default
+    fnm use default --log-level quiet
+    Assert-NativeSuccess 'fnm use default'
     node --version
     Assert-NativeSuccess 'node'
     npm.cmd --version

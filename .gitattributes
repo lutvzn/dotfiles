@@ -1,0 +1,2 @@
+# Keep text portable, including Unix shell files checked out on Windows.
+* text=auto eol=lf

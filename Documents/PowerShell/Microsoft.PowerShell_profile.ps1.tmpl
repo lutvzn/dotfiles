@@ -8,22 +8,17 @@ if (Test-Path $bunBin) {
 # Stable user-local Pi prefix, independent of fnm's Node installation directories.
 $piPrefix = Join-Path $HOME ".local/share/pi"
 $localBin = Join-Path $HOME ".local/bin"
-$env:PATH = "$localBin;$piPrefix;$env:PATH"
-
 if (Get-Command fnm -ErrorAction SilentlyContinue) {
     fnm env --shell powershell | Out-String | Invoke-Expression
     $fnmRepair = Join-Path $HOME '.config/personalScripts/Repair-Fnm.ps1'
     if (Test-Path -LiteralPath $fnmRepair) {
-        try {
-            . $fnmRepair
-            Repair-Fnm -Default
-        } catch {
-            Write-Warning "fnm repair failed: $($_.Exception.Message). See ~/.config/personalScripts/logs/Repair-Fnm.log"
-        }
-    } else {
-        fnm use default --log-level quiet
+        # Load the manual repair command without running checks at startup.
+        . $fnmRepair
     }
+    fnm use default --log-level quiet
 }
+# fnm prepends its Node directory; keep the managed Pi ahead of older globals.
+$env:PATH = "$localBin;$piPrefix;$env:PATH"
 
 function .. { Set-Location .. }
 function ... { Set-Location ../.. }

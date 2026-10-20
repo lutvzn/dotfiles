@@ -19,11 +19,13 @@ if status is-interactive
     end
 
     # Stable Pi prefix and fnm-managed default Node.
-    fish_add_path --move ~/.local/share/pi/bin ~/.local/share/pi ~/.local/share/fnm
+    fish_add_path --move ~/.local/share/fnm
     if type -q fnm
         fnm env --shell fish | source
         fnm use default --log-level quiet
     end
+    # Move ahead of fnm's Node directory, including older global Pi shims.
+    fish_add_path --path --move ~/.local/share/pi/bin ~/.local/share/pi
 
     # Tool Initialization
     if type -q zoxide; zoxide init fish | source; end

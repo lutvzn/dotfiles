@@ -162,7 +162,8 @@ install_with_transactional_update() {
 install_with_pacman() {
   log_message "INFO: Installing missing prerequisite packages with pacman: ${MISSING_PACKAGES[*]}."
 
-  if run_with_sudo pacman -Sy --noconfirm "${MISSING_PACKAGES[@]}"; then
+  # Refreshing databases requires a full upgrade to avoid partial upgrades.
+  if run_with_sudo pacman -Syu --noconfirm "${MISSING_PACKAGES[@]}"; then
     log_message "SUCCESS: Missing prerequisite packages installed with pacman."
   else
     log_message "ERROR: Failed to install missing prerequisite packages with pacman."

@@ -31,8 +31,6 @@ $env.PATH = (
         ($env.HOME | path join ".local" "bin")
         ($env.HOME | path join "bin")
         ($env.HOME | path join ".cargo" "bin")
-        ($env.HOME | path join ".local" "share" "pi" "bin")
-        ($env.HOME | path join ".local" "share" "pi")
         ($env.HOME | path join ".local" "share" "fnm")
         ($env.HOME | path join ".bun" "bin")
     ]
@@ -57,3 +55,9 @@ if (which fnm | is-not-empty) {
     $env.PATH = ($env.PATH | prepend $node_bin | uniq)
     ^fnm use default --log-level quiet
 }
+
+# Keep the managed Pi ahead of fnm's Node directory and older global shims.
+$env.PATH = ($env.PATH | prepend [
+    ($env.HOME | path join ".local" "share" "pi" "bin")
+    ($env.HOME | path join ".local" "share" "pi")
+] | where {|path| $path | path exists } | uniq)
