@@ -64,8 +64,12 @@ function Invoke-BwWithPassword {
 }
 
 function Set-GitHelper {
+    # Windows PowerShell 5.1 (and PS 7 in Legacy mode) drops empty native arguments,
+    # so pass a literal "" pair there to give git an empty helper value.
+    $emptyArg = if ($PSNativeCommandArgumentPassing -in $null, 'Legacy') { '""' } else { '' }
+
     git config --global --unset-all "credential.$forgejoUrl.helper" 2>$null
-    git config --global --add "credential.$forgejoUrl.helper" ""
+    git config --global --add "credential.$forgejoUrl.helper" $emptyArg
     if ($LASTEXITCODE -ne 0) {
         Write-Log "ERROR: Failed to add $forgejoUrl credential reset helper."
         exit 1
@@ -80,9 +84,7 @@ function Set-GitHelper {
     Write-Log "SUCCESS: git uses tea for $forgejoUrl credentials."
 }
 
-# Winget ran earlier in the same chezmoi process; refresh its PATH additions.
-$env:PATH = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
-    [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:PATH
+{{ template "refresh-path.ps1" . }}
 
 foreach ($command in @("git", "tea", "bw")) {
     if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {

@@ -12,9 +12,7 @@ function Assert-NativeSuccess([string] $step) {
 }
 
 try {
-    # Winget ran earlier in the same chezmoi process; refresh its PATH additions.
-    $env:PATH = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
-        [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:PATH
+{{ template "refresh-path.ps1" . }}
     if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
         throw 'fnm was not found. Ensure the Winget configuration installed Schniz.fnm.'
     }

@@ -2,8 +2,7 @@
 # Run on every chezmoi update, but not on apply or PowerShell startup.
 # Ordered after Winget provisioning and before Pi setup.
 $ErrorActionPreference = 'Stop'
-$env:PATH = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
-    [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:PATH
+{{ template "refresh-path.ps1" . }}
 . (Join-Path $HOME '.config/personalScripts/Repair-Fnm.ps1')
 Repair-Fnm -Default
 {{ end -}}
