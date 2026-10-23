@@ -1,0 +1,70 @@
+{{ if eq .chezmoi.os "windows" -}}
+$ErrorActionPreference = 'Stop'
+
+# Run after Winget provisioning. PS7 can read Terminal's JSON with comments and
+# trailing commas; Windows PowerShell 5.1 cannot.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $pwsh = Join-Path $env:ProgramFiles 'PowerShell/7/pwsh.exe'
+    if (-not (Test-Path -LiteralPath $pwsh)) {
+        throw 'PowerShell 7 is missing. Apply the Winget configuration first.'
+    }
+    & $pwsh -NoProfile -File $PSCommandPath
+    if ($LASTEXITCODE -ne 0) { throw "Configuring PowerShell failed: $LASTEXITCODE" }
+    return
+}
+
+$logDir = Join-Path $HOME '.config/personalScripts/logs'
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+Start-Transcript -Path (Join-Path $logDir 'run_onchange_after_W01-set-default-powershell.log') -Append
+try {
+    $settingsFiles = @(
+        "$env:LOCALAPPDATA/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+        "$env:LOCALAPPDATA/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
+        "$env:LOCALAPPDATA/Microsoft/Windows Terminal/settings.json"
+    )
+    $configured = $false
+    foreach ($settingsFile in $settingsFiles) {
+        if (-not (Test-Path -LiteralPath (Split-Path $settingsFile -Parent))) { continue }
+        $settings = if (Test-Path -LiteralPath $settingsFile) {
+            Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json -AsHashtable
+        } else { @{} }
+        $guid = '{574e5eac-4f2a-5b96-ac1e-a2962a402336}'
+        if (-not $settings.Contains('profiles')) { $settings.profiles = @{} }
+        # Older Terminal versions used a bare profiles array.
+        if ($settings.profiles -is [System.Collections.IList]) {
+            $settings.profiles = @{ list = @($settings.profiles) }
+        }
+        if (-not $settings.profiles.Contains('list')) { $settings.profiles.list = @() }
+        $profile = $settings.profiles.list | Where-Object { $_.guid -eq $guid } | Select-Object -First 1
+        $commandline = '"' + (Join-Path $PSHOME 'pwsh.exe') + '"'
+        $changed = $settings.defaultProfile -ne $guid
+        if ($null -eq $profile) {
+            $profile = @{ guid = $guid; name = 'PowerShell'; commandline = $commandline; hidden = $false }
+            $settings.profiles.list = @($settings.profiles.list) + @($profile)
+            $changed = $true
+        } elseif ($profile.hidden -eq $true -or $profile.commandline -ne $commandline) {
+            $profile.hidden = $false
+            $profile.commandline = $commandline
+            $changed = $true
+        }
+        if ($changed) {
+            if (Test-Path -LiteralPath $settingsFile) {
+                # Serialization preserves settings, but not JSON comments/formatting.
+                $backup = "$settingsFile.before-powershell7.bak"
+                if (-not (Test-Path -LiteralPath $backup)) {
+                    Copy-Item -LiteralPath $settingsFile -Destination $backup
+                }
+            }
+            $settings.defaultProfile = $guid
+            $settings | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $settingsFile -Encoding utf8
+        }
+        Write-Host "PowerShell 7 is the default profile in $settingsFile"
+        $configured = $true
+    }
+    if (-not $configured) {
+        Write-Warning 'Windows Terminal is not initialized. Open it once, then re-run this script to set its default profile.'
+    }
+} finally {
+    Stop-Transcript
+}
+{{ end -}}

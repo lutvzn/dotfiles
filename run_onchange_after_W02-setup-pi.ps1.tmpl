@@ -1,7 +1,7 @@
 {{ if eq .chezmoi.os "windows" -}}
 # Pi settings hash: {{ include ".chezmoitemplates/pi-settings.json" | sha256sum }}
 $ErrorActionPreference = 'Stop'
-$piVersion = '1.0.4'
+$piVersion = 'latest'
 $nodeVersion = '26'
 $logDir = Join-Path $HOME '.config/personalScripts/logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null

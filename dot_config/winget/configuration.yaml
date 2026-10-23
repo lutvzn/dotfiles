@@ -129,6 +129,13 @@ properties:
         id: Nushell.Nushell
         source: winget
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: PowerShell
+      directives:
+        description: Install PowerShell 7
+      settings:
+        id: Microsoft.PowerShell
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: Python
       directives:
         description: Install Python 3.14

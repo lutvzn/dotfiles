@@ -75,6 +75,24 @@ Manual steps:
    chezmoi apply -v
    ```
 
+Windows provisioning installs PowerShell 7 (`Microsoft.PowerShell`) and makes it
+Windows Terminal's default profile (stable, preview, and unpackaged installations
+that have been initialized). Other Terminal settings are preserved; the original
+`settings.json` is backed up as `settings.json.before-powershell7.bak` before the
+first change. JSON comments/formatting are not retained in the rewritten file.
+If Terminal has never been opened, open it once and run the setup explicitly:
+
+```powershell
+$script = Join-Path $env:TEMP 'set-default-powershell.ps1'
+chezmoi execute-template --file (Join-Path (chezmoi source-path) 'run_onchange_after_W01-set-default-powershell.ps1.tmpl') | Set-Content $script
+& "$env:ProgramFiles/PowerShell/7/pwsh.exe" -NoProfile -File $script
+```
+
+Open a new Terminal tab to use PowerShell 7. This does not replace `powershell.exe`
+(Windows PowerShell 5.1), change script file associations, or change SSH's shell.
+Both PowerShell editions load the same managed profile, including fnm and its
+default Node version.
+
 ## Running Chezmoi With This Repo
 
 Use this repository as the source state for your home directory:

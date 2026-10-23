@@ -1,0 +1,7 @@
+{{ if eq .chezmoi.os "windows" -}}
+# Share fnm initialization and shell helpers with the managed PowerShell 7 profile.
+$sharedProfile = Join-Path (Split-Path $PSScriptRoot -Parent) 'PowerShell/Microsoft.PowerShell_profile.ps1'
+if (Test-Path -LiteralPath $sharedProfile) {
+    . $sharedProfile
+}
+{{ end -}}
