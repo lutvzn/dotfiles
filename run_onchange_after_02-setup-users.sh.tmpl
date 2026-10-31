@@ -1,34 +1,19 @@
 {{ if eq .chezmoi.os "linux" -}}
 #!/bin/bash
 
-# setup-users.yml hash: {{ include "dot_config/personalScripts/setup-users.yml" | sha256sum }}
+# lutvzn itself is created and kept at 5997:5997 by run_before_00-0-check-lutvzn-ids.
 
 LOG_HOME="${ORIG_HOME:-$HOME}"
 LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
 LOG_FILE="$LOG_DIR/run_onchange_after_02-setup-users.log"
-CHEZMOI_SOURCE_DIR="{{ .chezmoi.sourceDir }}"
 PRIVILEGED_PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+TARGET_USER="lutvzn"
+GIT_EMAIL="106083845+lutvzn@users.noreply.github.com"
 
 mkdir -p "$LOG_DIR"
 
 log_message() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
-}
-
-source_brew_environment() {
-  local brew_bin
-
-  for brew_bin in \
-    "/home/linuxbrew/.linuxbrew/bin/brew" \
-    "/opt/homebrew/bin/brew" \
-    "/usr/local/bin/brew"; do
-    if [ -x "$brew_bin" ]; then
-      eval "$("$brew_bin" shellenv)"
-      return 0
-    fi
-  done
-
-  return 1
 }
 
 run_with_sudo() {
@@ -47,34 +32,69 @@ run_with_sudo() {
     return
   fi
 
-  log_message "ERROR: sudo or run0 is required to run the user creation playbook."
+  log_message "ERROR: sudo or run0 is required to configure users."
   exit 1
 }
 
-source_brew_environment || true
+remove_deploy_user() {
+  local file
 
-if ! command -v ansible-playbook >/dev/null 2>&1; then
-  log_message "ERROR: ansible-playbook is not installed or is unavailable after initializing Homebrew."
+  run_with_sudo rm -f /var/lib/systemd/linger/deploy
+
+  if getent passwd deploy >/dev/null; then
+    run_with_sudo userdel deploy || log_message "WARNING: Failed to remove user deploy."
+  fi
+
+  if getent group deploy >/dev/null; then
+    run_with_sudo groupdel deploy || log_message "WARNING: Failed to remove group deploy."
+  fi
+
+  for file in /etc/subuid /etc/subgid; do
+    if [ -f "$file" ]; then
+      run_with_sudo sed -i '/^deploy:/d' "$file"
+    fi
+  done
+}
+
+configure_login_shell() {
+  local shell_path
+
+  shell_path="$(PATH="$PRIVILEGED_PATH" command -v zsh)" || shell_path="/bin/bash"
+
+  if [ "$shell_path" != "/bin/bash" ] && ! grep -qxF "$shell_path" /etc/shells 2>/dev/null; then
+    echo "$shell_path" | run_with_sudo tee -a /etc/shells >/dev/null
+  fi
+
+  if [ "$(getent passwd "$TARGET_USER" | cut -d: -f7)" != "$shell_path" ]; then
+    run_with_sudo usermod -s "$shell_path" "$TARGET_USER" || {
+      log_message "ERROR: Failed to set the login shell of $TARGET_USER to $shell_path."
+      exit 1
+    }
+  fi
+}
+
+configure_home_and_git() {
+  local home_dir git_config
+
+  home_dir="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
+  git_config="$home_dir/.gitconfig"
+
+  if run_with_sudo chown "$TARGET_USER:$TARGET_USER" "$home_dir" \
+    && run_with_sudo chmod 0700 "$home_dir" \
+    && run_with_sudo git config --file "$git_config" user.name "$TARGET_USER" \
+    && run_with_sudo git config --file "$git_config" user.email "$GIT_EMAIL" \
+    && run_with_sudo chown "$TARGET_USER:$TARGET_USER" "$git_config" \
+    && run_with_sudo chmod 0600 "$git_config"; then
+    return
+  fi
+
+  log_message "ERROR: Failed to configure the home directory and Git identity of $TARGET_USER."
   exit 1
-fi
+}
 
-ANSIBLE_PLAYBOOK_BIN="$(command -v ansible-playbook)"
-PLAYBOOK_PATH="$CHEZMOI_SOURCE_DIR/dot_config/personalScripts/setup-users.yml"
-
-if [ ! -f "$PLAYBOOK_PATH" ]; then
-  log_message "ERROR: Ansible playbook not found at $PLAYBOOK_PATH."
-  exit 1
-fi
-
-log_message "INFO: Applying user creation playbook $PLAYBOOK_PATH."
-if [ "$(id -u)" -ne 0 ]; then
-  log_message "INFO: Escalating privileges to run the user creation playbook."
-fi
-
-if run_with_sudo "$ANSIBLE_PLAYBOOK_BIN" "$PLAYBOOK_PATH"; then
-  log_message "SUCCESS: User bootstrap playbook applied successfully."
-else
-  log_message "ERROR: Failed to apply user bootstrap playbook."
-  exit 1
-fi
+log_message "INFO: Configuring users."
+remove_deploy_user
+configure_login_shell
+configure_home_and_git
+log_message "SUCCESS: Users configured."
 {{ end -}}

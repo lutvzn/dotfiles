@@ -1,0 +1,282 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+# Runs before every other script. Makes sure lutvzn is 5997:5997, moving it from
+# a temporary admin user when it is not, because a user cannot be renumbered
+# while it is logged in. A non-zero exit deliberately stops chezmoi apply.
+
+LOG_HOME="${ORIG_HOME:-$HOME}"
+LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+LOG_FILE="$LOG_DIR/run_before_00-0-check-lutvzn-ids.log"
+PRIVILEGED_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+TARGET_USER="lutvzn"
+TARGET_ID=5997
+TEMP_ID_START=11000
+TEMP_MARKER="chezmoi-temp-user"
+TEMP_MARKER_FILE=".chezmoi-temp-user"
+CURRENT_USER="$(id -un)"
+
+mkdir -p "$LOG_DIR"
+
+log_message() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+run_with_sudo() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+    return
+  fi
+
+  if command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+    return
+  fi
+
+  if command -v run0 >/dev/null 2>&1; then
+    run0 /usr/bin/env "PATH=$PRIVILEGED_PATH" "$@"
+    return
+  fi
+
+  log_message "ERROR: sudo or run0 is required to manage users."
+  exit 1
+}
+
+# A user only counts as ours when its passwd entry matches and the root-owned
+# marker file is in its home. Homes can be 0700, so reading the file needs
+# privileges, but only once a passwd entry has already matched.
+find_temp_users() {
+  local name home
+
+  for name in $(getent passwd | awk -F: -v marker="$TEMP_MARKER" '$5 == marker && $1 == "u" $3 { print $1 }'); do
+    home="$(getent passwd "$name" | cut -d: -f6)"
+    if run_with_sudo test -f "$home/$TEMP_MARKER_FILE" \
+      && [ "$(run_with_sudo stat -c %u "$home/$TEMP_MARKER_FILE")" = "0" ]; then
+      echo "$name"
+    fi
+  done
+}
+
+is_temp_user() {
+  find_temp_users | grep -qxF "$1"
+}
+
+base_home_dir() {
+  if [ -d /var/home ]; then
+    echo /var/home
+  else
+    echo /home
+  fi
+}
+
+find_admin_group() {
+  local group
+
+  for group in wheel sudo; do
+    if getent group "$group" >/dev/null; then
+      echo "$group"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# The user and its group share one ID, so both have to be free.
+next_free_temp_id() {
+  local id="$TEMP_ID_START"
+
+  while getent passwd "$id" >/dev/null \
+    || getent group "$id" >/dev/null \
+    || getent passwd "u$id" >/dev/null \
+    || getent group "u$id" >/dev/null; do
+    id=$((id + 1))
+  done
+
+  echo "$id"
+}
+
+ensure_target_id_is_free() {
+  local holder
+
+  holder="$(getent passwd "$TARGET_ID" | cut -d: -f1)"
+  if [ -n "$holder" ] && [ "$holder" != "$TARGET_USER" ]; then
+    log_message "ERROR: UID $TARGET_ID is already used by user $holder."
+    exit 1
+  fi
+
+  holder="$(getent group "$TARGET_ID" | cut -d: -f1)"
+  if [ -n "$holder" ] && [ "$holder" != "$TARGET_USER" ]; then
+    log_message "ERROR: GID $TARGET_ID is already used by group $holder."
+    exit 1
+  fi
+}
+
+create_target_user() {
+  ensure_target_id_is_free
+  log_message "INFO: Creating $TARGET_USER as $TARGET_ID:$TARGET_ID."
+
+  if ! getent group "$TARGET_USER" >/dev/null \
+    && ! run_with_sudo groupadd -g "$TARGET_ID" "$TARGET_USER"; then
+    log_message "ERROR: Failed to create group $TARGET_USER."
+    exit 1
+  fi
+
+  if run_with_sudo useradd -m -d "$(base_home_dir)/$TARGET_USER" -u "$TARGET_ID" -g "$TARGET_ID" "$TARGET_USER"; then
+    log_message "SUCCESS: Created $TARGET_USER as $TARGET_ID:$TARGET_ID."
+  else
+    log_message "ERROR: Failed to create user $TARGET_USER."
+    exit 1
+  fi
+}
+
+create_temp_user() {
+  local admin_group id name home
+
+  if ! admin_group="$(find_admin_group)"; then
+    log_message "ERROR: No wheel or sudo group exists to give the temporary user admin rights."
+    exit 1
+  fi
+
+  id="$(next_free_temp_id)"
+  name="u$id"
+  home="$(base_home_dir)/$name"
+  log_message "INFO: Creating temporary user $name ($id:$id)." >&2
+
+  # stdout carries only the new name, because the caller captures it.
+  if run_with_sudo groupadd -g "$id" "$name" >&2 \
+    && run_with_sudo useradd -m -d "$home" -u "$id" -g "$id" -G "$admin_group" -c "$TEMP_MARKER" -s /bin/bash "$name" >&2 \
+    && echo "Created by chezmoi to move $TARGET_USER to $TARGET_ID:$TARGET_ID. Removed automatically afterwards." \
+      | run_with_sudo tee "$home/$TEMP_MARKER_FILE" >/dev/null; then
+    echo "$name"
+  else
+    log_message "ERROR: Failed to create temporary user $name." >&2
+    exit 1
+  fi
+}
+
+# usermod only fixes files inside the home directory, and files such as the
+# Homebrew prefix live outside it. -xdev keeps find off network and pseudo mounts.
+reown_files() {
+  local old_uid="$1" old_gid="$2" root
+
+  for root in /home /var/home /var /opt /srv /usr/local /etc /tmp /root; do
+    [ -d "$root" ] && realpath "$root"
+  done | sort -u | while read -r root; do
+    if [ "$old_uid" != "$TARGET_ID" ]; then
+      run_with_sudo find "$root" -xdev -uid "$old_uid" -exec chown -h "$TARGET_ID" {} +
+    fi
+    if [ -n "$old_gid" ] && [ "$old_gid" != "$TARGET_ID" ]; then
+      run_with_sudo find "$root" -xdev -gid "$old_gid" -exec chgrp -h "$TARGET_ID" {} +
+    fi
+  done
+}
+
+migrate_target_user() {
+  local old_uid old_gid own_group_gid
+
+  ensure_target_id_is_free
+
+  if pgrep -u "$TARGET_USER" >/dev/null; then
+    log_message "ERROR: $TARGET_USER still has running processes. Log out of every $TARGET_USER session, or run 'sudo loginctl terminate-user $TARGET_USER', then re-run chezmoi."
+    exit 1
+  fi
+
+  old_uid="$(id -u "$TARGET_USER")"
+  old_gid="$(id -g "$TARGET_USER")"
+  # Only retag group ownership when the group belongs to lutvzn alone. A shared
+  # primary group such as users must keep its other members' files untouched.
+  own_group_gid="$(getent group "$TARGET_USER" | cut -d: -f3)"
+
+  log_message "INFO: Moving $TARGET_USER from $old_uid:$old_gid to $TARGET_ID:$TARGET_ID."
+
+  if [ -z "$own_group_gid" ]; then
+    run_with_sudo groupadd -g "$TARGET_ID" "$TARGET_USER" || {
+      log_message "ERROR: Failed to create group $TARGET_USER."
+      exit 1
+    }
+  elif [ "$own_group_gid" != "$TARGET_ID" ]; then
+    run_with_sudo groupmod -g "$TARGET_ID" "$TARGET_USER" || {
+      log_message "ERROR: Failed to change the GID of group $TARGET_USER."
+      exit 1
+    }
+  fi
+
+  if ! run_with_sudo usermod -u "$TARGET_ID" -g "$TARGET_ID" "$TARGET_USER"; then
+    log_message "ERROR: Failed to change the UID and GID of $TARGET_USER."
+    exit 1
+  fi
+
+  if [ "$own_group_gid" = "$old_gid" ]; then
+    reown_files "$old_uid" "$old_gid"
+  else
+    reown_files "$old_uid" ""
+  fi
+
+  log_message "SUCCESS: $TARGET_USER is now $TARGET_ID:$TARGET_ID."
+}
+
+print_next_steps() {
+  local name="$1"
+
+  log_message "ERROR: $TARGET_USER is $(id -u "$TARGET_USER"):$(id -g "$TARGET_USER"), expected $TARGET_ID:$TARGET_ID. Temporary user $name is ready to move it."
+  cat <<EOF
+
+$TARGET_USER cannot be renumbered while it is logged in. To move it to $TARGET_ID:$TARGET_ID:
+
+  1. Give the temporary user a password:
+       sudo passwd $name
+  2. Log out of every $TARGET_USER session and log in as $name (console or SSH, not su).
+  3. Run chezmoi as $name:
+       sh -c "\$(curl -fsLS get.chezmoi.io)" -- init --apply $TARGET_USER
+  4. Log back in as $TARGET_USER and run chezmoi apply. This removes $name.
+
+EOF
+}
+
+remove_temp_users() {
+  local name
+
+  for name in $(find_temp_users); do
+    if pgrep -u "$name" >/dev/null; then
+      log_message "WARNING: Keeping temporary user $name because it still has running processes."
+      continue
+    fi
+
+    log_message "INFO: Removing temporary user $name."
+    if run_with_sudo userdel -r "$name"; then
+      log_message "SUCCESS: Removed temporary user $name."
+    else
+      log_message "WARNING: Failed to remove temporary user $name."
+    fi
+  done
+}
+
+finish_as_temp_user() {
+  log_message "INFO: Stopping here so dotfiles are not applied to temporary user $CURRENT_USER. Log in as $TARGET_USER and run chezmoi apply to remove it."
+  exit 1
+}
+
+if ! getent passwd "$TARGET_USER" >/dev/null; then
+  create_target_user
+elif [ "$(id -u "$TARGET_USER")" != "$TARGET_ID" ] || [ "$(id -g "$TARGET_USER")" != "$TARGET_ID" ]; then
+  if is_temp_user "$CURRENT_USER"; then
+    migrate_target_user
+    finish_as_temp_user
+  fi
+
+  TEMP_USER="$(find_temp_users | head -n 1)"
+  if [ -z "$TEMP_USER" ]; then
+    TEMP_USER="$(create_temp_user)" || exit 1
+  fi
+  print_next_steps "$TEMP_USER"
+  exit 1
+fi
+
+if is_temp_user "$CURRENT_USER"; then
+  finish_as_temp_user
+fi
+
+remove_temp_users
+{{ end -}}

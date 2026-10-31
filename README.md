@@ -1,13 +1,8 @@
 # Dotfiles
 
-On Linux, create the user with a fixed UID/GID first:
-
-```sh
-sudo groupadd -g 5997 lutvzn
-sudo useradd -m -u 5997 -g 5997 lutvzn
-```
-
 My personal dotfiles, managed with [chezmoi](https://www.chezmoi.io/).
+
+On Linux, the first thing `chezmoi apply` does is check that `lutvzn` is `5997:5997`. If the user is missing, it is created. If it has other IDs, the apply stops, a temporary admin user is created (`u11000`, or the next free ID) and the steps to move `lutvzn` by running chezmoi as that user are printed.
 
 On Linux, CLI packages are installed from `~/.config/homebrew/Brewfile` via Homebrew during `chezmoi apply`.
 
