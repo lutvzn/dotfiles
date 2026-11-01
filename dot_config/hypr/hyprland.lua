@@ -47,7 +47,10 @@ local menu        = "noctalia msg panel-toggle launcher"
 --   hl.exec_cmd("nm-applet")
 --   hl.exec_cmd("waybar & hyprpaper & firefox")
 -- end)
-hl.on("hyprland.start", function() hl.exec_cmd("noctalia") end)
+hl.on("hyprland.start", function()
+    hl.exec_cmd("test -x /usr/libexec/pam_kwallet_init && /usr/libexec/pam_kwallet_init")
+    hl.exec_cmd("noctalia")
+end)
 
 
 -------------------------------
