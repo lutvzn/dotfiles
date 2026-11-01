@@ -4,6 +4,10 @@ README.md
 
 {{- if eq .chezmoi.os "windows" }}
 .local/bin/dotfiles-doctor
+.config/hypr
+.config/hypr/**
+.config/noctalia
+.config/noctalia/**
 {{- else }}
 .local/bin/dotfiles-doctor.cmd
 {{- end }}
