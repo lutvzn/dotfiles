@@ -1,0 +1,194 @@
+{{ if eq .chezmoi.os "windows" -}}
+# Logs gh in to GitHub and, on personal machines, tea in to Forgejo and installs
+# the SSH commit signing key, so HTTPS git, the gh/tea CLIs, and signed commits
+# work as soon as chezmoi apply finishes. ~/.config/git/config already points git
+# at gh and tea as credential helpers and at the signing key.
+# Personal machines read everything from Bitwarden with a single unlock; other
+# machines (no NetBird, so no Vaultwarden) use gh's browser login instead.
+
+$personal = ${{ .personal }}
+$bwServer = "https://vault.lct.st"
+$githubHost = "github.com"
+$githubBwItem = "github.com access token"
+$forgejoUrl = "https://git.lct.st"
+$forgejoBwItem = "git.lct.st access token"
+$teaLoginName = "git.lct.st"
+$signingBwItem = "lutvzn git signing key"
+$sshDir = Join-Path $HOME ".ssh"
+$signingKey = Join-Path $sshDir "git_signing_ed25519"
+$allowedSigners = Join-Path $sshDir "allowed_signers"
+
+{{ template "write-log.ps1" . }}
+$logFile = Join-Path $logDir "run_onchange_after_W05-login-git-forges.log"
+
+{{ template "bitwarden.ps1" . }}
+
+# Checks the stored gh token against the GitHub API.
+function Test-GhLogin {
+    gh api --hostname $githubHost user --jq .login 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
+}
+
+# Checks the token git will receive from tea against the Forgejo API.
+function Test-TeaLogin {
+    $hostName = $forgejoUrl -replace '^https://', ''
+    $credential = "protocol=https`nhost=$hostName`n`n" | tea login helper get 2>$null
+    $token = ($credential | Where-Object { $_ -like 'password=*' }) -replace '^password=', ''
+    if (-not $token) { return $false }
+
+    try {
+        Invoke-RestMethod -Uri "$forgejoUrl/api/v1/user" -Headers @{ Authorization = "token $token" } | Out-Null
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+# Checks that the signing key, its public half, and the allowed signers entry
+# exist and belong together (ssh-keygen -l reads the public part of either file).
+function Test-SigningKey {
+    if (-not ((Test-Path $signingKey) -and (Test-Path "$signingKey.pub") -and (Test-Path $allowedSigners))) {
+        return $false
+    }
+
+    $privateFingerprint = (ssh-keygen -l -f $signingKey 2>$null) -split ' ' | Select-Object -Index 1
+    $publicFingerprint = (ssh-keygen -l -f "$signingKey.pub" 2>$null) -split ' ' | Select-Object -Index 1
+    $public = (((Get-Content "$signingKey.pub" -Raw).Trim()) -split ' ')[0..1] -join ' '
+
+    return $privateFingerprint -and ($privateFingerprint -eq $publicFingerprint) -and
+        (Select-String -Path $allowedSigners -SimpleMatch -Quiet -Pattern $public)
+}
+
+{{ template "refresh-path.ps1" . }}
+
+$requiredCommands = @("git", "gh")
+if ($personal) { $requiredCommands += @("tea", "bw", "ssh-keygen") }
+foreach ($command in $requiredCommands) {
+    if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
+        Write-Log "ERROR: $command is not installed or not available in PATH."
+        exit 1
+    }
+}
+
+$githubNeeded = $false
+$forgejoNeeded = $false
+$signingNeeded = $false
+
+if (Test-GhLogin) {
+    Write-Log "gh is already logged in to $githubHost."
+} else {
+    $githubNeeded = $true
+}
+
+if ($personal) {
+    if (Test-TeaLogin) {
+        Write-Log "tea is already logged in to $forgejoUrl."
+    } else {
+        $forgejoNeeded = $true
+    }
+
+    if (Test-SigningKey) {
+        Write-Log "The SSH signing key is already installed at $signingKey."
+    } else {
+        $signingNeeded = $true
+    }
+}
+
+if (-not $githubNeeded -and -not $forgejoNeeded -and -not $signingNeeded) { exit 0 }
+
+# Not GITHUB_TOKEN/GH_TOKEN: gh reads those from the environment.
+$ghLoginToken = $null
+$forgejoToken = $null
+$signingItem = $null
+
+if ($personal) {
+    if (-not (Unlock-Bitwarden $bwServer)) { exit 1 }
+    if ($githubNeeded) { $ghLoginToken = Get-BitwardenPassword $githubBwItem }
+    if ($forgejoNeeded) { $forgejoToken = Get-BitwardenPassword $forgejoBwItem }
+    if ($signingNeeded) { $signingItem = Get-BitwardenItem $signingBwItem }
+    Lock-Bitwarden
+}
+
+$status = 0
+
+if ($githubNeeded) {
+    if ($ghLoginToken) {
+        # Passed through stdin so the token never appears in the process list.
+        $ghLoginToken | gh auth login --hostname $githubHost --git-protocol https --with-token
+    } else {
+        if ($personal) {
+            Write-Log "Bitwarden item '$githubBwItem' not found; falling back to the browser login."
+        }
+        gh auth login --hostname $githubHost --git-protocol https --web --skip-ssh-key
+    }
+    $ghLoginToken = $null
+
+    if (Test-GhLogin) {
+        Write-Log "SUCCESS: gh is logged in to $githubHost as $(gh api --hostname $githubHost user --jq .login)."
+    } else {
+        Write-Log "ERROR: gh could not log in to $githubHost."
+        $status = 1
+    }
+}
+
+if ($forgejoNeeded) {
+    # A stale login (revoked token) would block re-adding it under the same name.
+    tea login delete $teaLoginName 2>$null | Out-Null
+
+    if (-not $forgejoToken) {
+        Write-Log "ERROR: Could not read the password of Bitwarden item '$forgejoBwItem'."
+        $status = 1
+    } else {
+        # Passed through the environment so the token never appears in the process list.
+        $env:GITEA_SERVER_TOKEN = $forgejoToken
+        tea login add --name $teaLoginName --url $forgejoUrl | Out-Null
+        $teaExitCode = $LASTEXITCODE
+        Remove-Item Env:GITEA_SERVER_TOKEN
+
+        if ($teaExitCode -eq 0 -and (Test-TeaLogin)) {
+            Write-Log "SUCCESS: tea is logged in to $forgejoUrl."
+        } else {
+            Write-Log "ERROR: tea could not log in to $forgejoUrl with the token from '$forgejoBwItem'."
+            $status = 1
+        }
+    }
+    $forgejoToken = $null
+}
+
+if ($signingNeeded) {
+    $gitEmail = git config --get user.email
+    $signingPublic = $null
+    if ($signingItem -and $signingItem.sshKey.publicKey) {
+        $signingPublic = (($signingItem.sshKey.publicKey.Trim()) -split ' ')[0..1] -join ' '
+    }
+
+    if (-not $signingPublic) {
+        Write-Log "ERROR: Could not read the SSH key of Bitwarden item '$signingBwItem'."
+        $status = 1
+    } elseif (-not $gitEmail) {
+        Write-Log "ERROR: git has no user.email to put in $allowedSigners."
+        $status = 1
+    } else {
+        # OpenSSH wants LF line endings, no BOM, and a key file only this user can read.
+        $utf8 = [Text.UTF8Encoding]::new($false)
+        $privateKey = ($signingItem.sshKey.privateKey -replace "`r`n", "`n").TrimEnd("`n") + "`n"
+        New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
+        [IO.File]::WriteAllText($signingKey, $privateKey, $utf8)
+        icacls $signingKey /inheritance:r /grant:r "${env:USERNAME}:F" | Out-Null
+        [IO.File]::WriteAllText("$signingKey.pub", "$signingPublic`n", $utf8)
+        [IO.File]::WriteAllText($allowedSigners, "$gitEmail namespaces=`"git`" $signingPublic`n", $utf8)
+        $privateKey = $null
+
+        if (Test-SigningKey) {
+            $fingerprint = (ssh-keygen -l -f "$signingKey.pub") -split ' ' | Select-Object -Index 1
+            Write-Log "SUCCESS: Installed the SSH signing key $fingerprint at $signingKey."
+        } else {
+            Write-Log "ERROR: The key in Bitwarden item '$signingBwItem' is not a usable SSH key."
+            $status = 1
+        }
+    }
+    $signingItem = $null
+}
+
+exit $status
+{{ end -}}

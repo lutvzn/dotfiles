@@ -14,4 +14,15 @@
 [credential "https://git.lct.st"]
 	helper =
 	helper = !{{ $bin }}tea login helper
+{{- /* SSH signing key and allowed signers are installed from Bitwarden by the git forge login script. */}}
+[user]
+	signingkey = ~/.ssh/git_signing_ed25519
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	allowedSignersFile = ~/.ssh/allowed_signers
+[commit]
+	gpgsign = true
+[tag]
+	gpgsign = true
 {{- end }}

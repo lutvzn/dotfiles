@@ -1,6 +1,6 @@
 {{ if and (eq .chezmoi.os "windows") .personal -}}
 # Connects NetBird (installed by Winget), so Vaultwarden (vault.lct.st,
-# reachable only over NetBird) is available to the Forgejo login that follows.
+# reachable only over NetBird) is available to the git forge logins that follow.
 # Set NB_SETUP_KEY to join with a setup key instead of the SSO browser login.
 
 $vaultUrl = "https://vault.lct.st"

@@ -233,38 +233,70 @@ bootstrap if you want to restore 26 as the default.
 
 Vaultwarden (`https://vault.lct.st`) is only reachable over NetBird, so
 `run_onchange_after_06-setup-netbird.sh` (Linux) and
-`run_onchange_after_W04-setup-netbird.ps1` (Windows) run before the Forgejo
-login. On Linux the script installs NetBird with the official installer
+`run_onchange_after_W04-setup-netbird.ps1` (Windows) run before the git forge
+logins. On Linux the script installs NetBird with the official installer
 (`https://pkgs.netbird.io/install.sh`); Windows installs it through Winget.
 Both then run `netbird up`: open the printed URL (or the browser window) to
 approve the machine, or export `NB_SETUP_KEY` beforehand to join unattended.
 The script waits up to 60 seconds for Vaultwarden to answer and fails otherwise,
-which stops `chezmoi apply` before the Forgejo login.
+which stops `chezmoi apply` before the git forge logins.
 
 On rpm-ostree systems NetBird is layered into the next deployment: reboot and
 re-run `chezmoi apply`. Logs: `~/.config/personalScripts/logs/run_onchange_after_06-setup-netbird.log`
 (Windows: `run_onchange_after_W04-setup-netbird.log`).
 
-## Forgejo (git.lct.st)
+## Git forges (GitHub and git.lct.st)
 
-After provisioning, `run_onchange_after_07-configure-forgejo.sh` (Linux) and
-`run_onchange_after_W05-configure-forgejo.ps1` (Windows) log `tea` in to
-`https://git.lct.st`; the managed git config already uses tea as the credential
-helper for that host, so HTTPS pushes work as soon as `chezmoi apply` finishes.
+After provisioning, `run_onchange_after_07-login-git-forges.sh` (Linux) and
+`run_onchange_after_W05-login-git-forges.ps1` (Windows) log `gh` in to GitHub
+and, on personal machines, `tea` in to `https://git.lct.st` and install the SSH
+commit signing key. The managed git config already uses gh and tea as credential
+helpers for those hosts and signs every commit and tag on personal machines, so
+HTTPS git, the `gh`/`tea` CLIs, and signed commits work as soon as
+`chezmoi apply` finishes. Logins and keys that already work are left alone.
 
-The token comes from Bitwarden (Vaultwarden at `https://vault.lct.st`):
+On personal machines the tokens and the signing key come from Bitwarden
+(Vaultwarden at `https://vault.lct.st`), unlocked once for all of them:
 
-1. In Forgejo, create an access token under Settings → Applications with
+1. In GitHub, create a classic personal access token under Settings → Developer
+   settings with `repo`, `read:org`, `gist`, and `workflow`. Store it as the
+   **password** of a Bitwarden item named `github.com access token`.
+2. In Forgejo, create an access token under Settings → Applications with
    `write:repository`, `write:issue`, `read:user`, and `read:organization`.
-2. Store it as the **password** of a Bitwarden item named
+   Store it as the **password** of a Bitwarden item named
    `git.lct.st access token`.
+3. In Bitwarden, create an **SSH key** item named `lutvzn git signing key`
+   (Bitwarden generates an Ed25519 key). Register its public key once on each
+   forge:
+   - GitHub: Settings → SSH and GPG keys → New SSH key, key type **Signing Key**.
+   - Forgejo: Settings → SSH / GPG keys → Add key, then **Verify** it as
+     prompted. Forgejo only marks commits verified when the committer email
+     (`106083845+lutvzn@users.noreply.github.com`) is an activated email on
+     your account.
+
+Create the signing key item before applying on a personal machine: git is set
+to sign every commit, so commits fail until the key is installed. To skip
+signing for one commit, use `git -c commit.gpgsign=false commit`.
 
 During apply, the script logs in to or unlocks Bitwarden (prompting for your
-master password), reads the token, locks the vault again, and runs
-`tea login add`. To run unattended, export an unlocked `BW_SESSION` first.
-The token is saved by tea in `~/.config/tea/config.yml`; it is never stored in
-this repository. Logs: `~/.config/personalScripts/logs/run_onchange_after_07-configure-forgejo.log`
-(Windows: `run_onchange_after_W05-configure-forgejo.log`).
+master password), reads the tokens and key, locks the vault again, runs
+`gh auth login --with-token` and `tea login add`, and writes the key to
+`~/.ssh/git_signing_ed25519` (plus `.pub`) and `~/.ssh/allowed_signers`, which
+lets `git log --show-signature` verify commits locally. To run unattended, export an
+unlocked `BW_SESSION` first. If the GitHub item is missing, and on non-personal
+machines (which cannot reach Vaultwarden), `gh` falls back to its browser login.
+gh stores its token in the system keyring and tea in `~/.config/tea/config.yml`;
+none of these secrets are stored in this repository. Logs:
+`~/.config/personalScripts/logs/run_onchange_after_07-login-git-forges.log`
+(Windows: `run_onchange_after_W05-login-git-forges.log`).
+
+The script is a `run_onchange_` script, so it only reruns by itself when its
+contents change. After rotating a token or the signing key in Bitwarden, delete
+the old key files (for the key) and run it directly:
+
+```sh
+bash <(chezmoi execute-template < "$(chezmoi source-path)/run_onchange_after_07-login-git-forges.sh.tmpl")
+```
 
 Commits use the same git email as GitHub. Add
 `106083845+lutvzn@users.noreply.github.com` as an email on your Forgejo
