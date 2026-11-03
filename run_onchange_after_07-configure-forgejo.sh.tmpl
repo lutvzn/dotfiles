@@ -1,50 +1,16 @@
-{{ if eq .chezmoi.os "linux" -}}
+{{ if and (eq .chezmoi.os "linux") .personal -}}
 #!/bin/bash
 
-# Logs tea into Forgejo with a token stored in Bitwarden and makes git use it,
-# so HTTPS pushes to git.lct.st work as soon as chezmoi apply finishes.
+# Logs tea into Forgejo with a token stored in Bitwarden, so HTTPS pushes to
+# git.lct.st work as soon as chezmoi apply finishes. ~/.config/git/config
+# already points git at tea for that host.
 
-LOG_HOME="${ORIG_HOME:-$HOME}"
-LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+{{ template "common.sh" . }}
 LOG_FILE="$LOG_DIR/run_onchange_after_07-configure-forgejo.log"
 FORGEJO_URL="https://git.lct.st"
 TEA_LOGIN_NAME="git.lct.st"
 BW_SERVER="https://vault.lct.st"
 BW_ITEM="git.lct.st access token"
-
-mkdir -p "$LOG_DIR"
-
-log_message() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
-}
-
-source_brew_environment() {
-  local brew_bin
-
-  for brew_bin in \
-    "/home/linuxbrew/.linuxbrew/bin/brew" \
-    "/opt/homebrew/bin/brew" \
-    "/usr/local/bin/brew"; do
-    if [ -x "$brew_bin" ]; then
-      eval "$("$brew_bin" shellenv)"
-      return 0
-    fi
-  done
-
-  return 1
-}
-
-configure_git_helper() {
-  git config --global --unset-all "credential.$FORGEJO_URL.helper" || true
-
-  if git config --global --add "credential.$FORGEJO_URL.helper" "" \
-    && git config --global --add "credential.$FORGEJO_URL.helper" "!$TEA_BIN login helper"; then
-    log_message "SUCCESS: git uses tea for $FORGEJO_URL credentials."
-  else
-    log_message "ERROR: Failed to configure the git credential helper for $FORGEJO_URL."
-    exit 1
-  fi
-}
 
 # Checks the token git will receive from tea against the Forgejo API.
 # The header goes through stdin so the token never appears in the process list.
@@ -110,7 +76,6 @@ TEA_BIN="$(command -v tea)"
 
 if tea_login_works; then
   log_message "INFO: tea is already logged in to $FORGEJO_URL."
-  configure_git_helper
   exit 0
 fi
 
@@ -166,6 +131,4 @@ else
   log_message "ERROR: tea could not log in to $FORGEJO_URL with the token from '$BW_ITEM'."
   exit 1
 fi
-
-configure_git_helper
 {{ end -}}

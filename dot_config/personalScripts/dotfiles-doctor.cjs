@@ -67,7 +67,7 @@ const prefix = path.join(home, '.local', 'share', 'pi');
 const piManifest = path.join(prefix, 'lib', 'node_modules', '@earendil-works', 'pi-coding-agent', 'package.json');
 const windowsPiManifest = path.join(prefix, 'node_modules', '@earendil-works', 'pi-coding-agent', 'package.json');
 const pi = json(windows ? windowsPiManifest : piManifest);
-if (pi) report(pi.version === '1.0.4' ? 'PASS' : 'WARN', `Stable-prefix Pi: ${pi.version}; bootstrap pins 1.0.4`);
+if (pi) report(pi.version === '1.4.0' ? 'PASS' : 'WARN', `Stable-prefix Pi: ${pi.version}; bootstrap pins 1.4.0`);
 if (commands.pi.length) {
   const expected = real(prefix);
   const active = real(commands.pi[0]);

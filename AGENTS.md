@@ -15,6 +15,9 @@ This repository is designed to be managed and interacted with by AI agents (like
 - **Location**: `dot_config/personalScripts/`
 - **Homebrew Installation**: `run_once_before_00-install-prereqs.sh.tmpl` installs Homebrew on Linux after ensuring base prerequisites like `git` and `curl` are present.
 - **CLI Packages**: `dot_config/homebrew/Brewfile` defines the core CLI toolset.
-- **Package Management**: `run_onchange_02-install-packages.sh.tmpl` reapplies the Brew bundle whenever the Brewfile changes.
+- **Package Management**: `run_onchange_01-install-packages.sh.tmpl` reapplies the Brew bundle whenever the Brewfile changes.
+- **Shared Helpers**: Linux run scripts include `.chezmoitemplates/common.sh` (`log_message`, `source_brew_environment`, `run_with_sudo`); Windows run scripts include `.chezmoitemplates/write-log.ps1`. Set the log file after the include.
+- **Machine Data**: `.chezmoi.toml.tmpl` prompts once for `personal`. User creation, NetBird, and Forgejo scripts (and the Forgejo git credential helper) run only when it is true.
+- **Git Config**: `dot_config/git/config.tmpl` manages identity and credential helpers declaratively; do not add `git config --global` calls to run scripts.
 - **Execution Order**: Scripts prefixed with `run_onchange_` are prioritized by `chezmoi` to ensure dependencies like Homebrew are available for other configuration tasks.
 - **Logging**: Installation scripts should log their status (success/error/info) to `~/.config/personalScripts/logs/<Script-Name>.log` for troubleshooting.

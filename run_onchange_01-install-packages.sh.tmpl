@@ -4,34 +4,10 @@
 # This hash ensures the script runs whenever the Brewfile changes:
 # Brewfile hash: {{ include "dot_config/homebrew/Brewfile" | sha256sum }}
 
-LOG_HOME="${ORIG_HOME:-$HOME}"
-LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+{{ template "common.sh" . }}
 LOG_FILE="$LOG_DIR/run_onchange_01-install-packages.log"
 SOURCE_HOME="${ORIG_HOME:-$HOME}"
 BREWFILE="$SOURCE_HOME/.config/homebrew/Brewfile"
-
-# Ensure the log directory exists
-mkdir -p "$LOG_DIR"
-
-log_message() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
-}
-
-source_brew_environment() {
-  local brew_bin
-
-  for brew_bin in \
-    "/home/linuxbrew/.linuxbrew/bin/brew" \
-    "/opt/homebrew/bin/brew" \
-    "/usr/local/bin/brew"; do
-    if [ -x "$brew_bin" ]; then
-      eval "$("$brew_bin" shellenv)"
-      return 0
-    fi
-  done
-
-  return 1
-}
 
 source_brew_environment || true
 
@@ -54,24 +30,9 @@ else
   exit 1
 fi
 
-BUN_BIN="$SOURCE_HOME/.bun/bin/bun"
-
-if [ -x "$BUN_BIN" ]; then
-  log_message "INFO: bun is already installed at $BUN_BIN."
-else
-  log_message "INFO: Installing bun with the official installer..."
-
-  if env HOME="$SOURCE_HOME" bash -c 'curl -fsSL https://bun.sh/install | bash'; then
-    log_message "SUCCESS: bun installed successfully at $BUN_BIN."
-  else
-    log_message "ERROR: Failed to install bun."
-    exit 1
-  fi
-fi
-
 log_message "Installing/Updating opencode globally with bun..."
 
-if env HOME="$SOURCE_HOME" "$BUN_BIN" install -g opencode-ai; then
+if env HOME="$SOURCE_HOME" bun install -g opencode-ai; then
   log_message "SUCCESS: opencode installed/updated successfully."
 else
   log_message "ERROR: Failed to install opencode."

@@ -1,0 +1,4 @@
+{{- $personal := promptBoolOnce . "personal" "Personal machine (create users, join NetBird, log in to Forgejo)" true -}}
+
+[data]
+    personal = {{ $personal }}

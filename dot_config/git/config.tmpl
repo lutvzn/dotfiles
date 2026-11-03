@@ -1,0 +1,17 @@
+{{- /* Linuxbrew is not on PATH for non-interactive git, so use absolute paths there. */ -}}
+{{- $bin := "" -}}
+{{- if eq .chezmoi.os "linux" }}{{ $bin = "/home/linuxbrew/.linuxbrew/bin/" }}{{ end -}}
+[user]
+	name = lutvzn
+	email = 106083845+lutvzn@users.noreply.github.com
+[credential "https://github.com"]
+	helper =
+	helper = !{{ $bin }}gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !{{ $bin }}gh auth git-credential
+{{- if .personal }}
+[credential "https://git.lct.st"]
+	helper =
+	helper = !{{ $bin }}tea login helper
+{{- end }}

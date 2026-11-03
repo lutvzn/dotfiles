@@ -8,8 +8,10 @@ README.md
 .config/hypr/**
 .config/noctalia
 .config/noctalia/**
+.config/personalScripts/enable-composefs.sh
 {{- else }}
 .local/bin/dotfiles-doctor.cmd
+.config/personalScripts/Repair-Fnm.ps1
 {{- end }}
 
 {{- if ne .chezmoi.os "windows" }}

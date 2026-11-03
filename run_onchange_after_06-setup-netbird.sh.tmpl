@@ -1,42 +1,14 @@
-{{ if eq .chezmoi.os "linux" -}}
+{{ if and (eq .chezmoi.os "linux") .personal -}}
 #!/bin/bash
 
 # Installs NetBird and connects this machine, so Vaultwarden (vault.lct.st,
 # reachable only over NetBird) is available to the Forgejo login that follows.
 # Export NB_SETUP_KEY to join with a setup key instead of the SSO browser login.
 
-LOG_HOME="${ORIG_HOME:-$HOME}"
-LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+{{ template "common.sh" . }}
 LOG_FILE="$LOG_DIR/run_onchange_after_06-setup-netbird.log"
 VAULT_URL="https://vault.lct.st"
 VAULT_WAIT_SECONDS=60
-PRIVILEGED_PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-
-mkdir -p "$LOG_DIR"
-
-log_message() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
-}
-
-run_with_sudo() {
-  if [ "$(id -u)" -eq 0 ]; then
-    "$@"
-    return
-  fi
-
-  if command -v sudo >/dev/null 2>&1; then
-    sudo "$@"
-    return
-  fi
-
-  if command -v run0 >/dev/null 2>&1; then
-    run0 /usr/bin/env "PATH=$PRIVILEGED_PATH" "$@"
-    return
-  fi
-
-  log_message "ERROR: sudo or run0 is required to install NetBird."
-  exit 1
-}
 
 netbird_connected() {
   netbird status 2>/dev/null | grep -q 'Management: Connected'

@@ -1,8 +1,7 @@
 {{ if eq .chezmoi.os "linux" -}}
 #!/bin/bash
 
-LOG_HOME="${ORIG_HOME:-$HOME}"
-LOG_DIR="$LOG_HOME/.config/personalScripts/logs"
+{{ template "common.sh" . }}
 LOG_FILE="$LOG_DIR/run_once_before_00-install-prereqs.log"
 REQUIRED_PACKAGES=(git curl zsh unzip)
 MISSING_PACKAGES=()
@@ -11,33 +10,6 @@ TARGET_HOME="${ORIG_HOME:-$(getent passwd "$TARGET_USER" | cut -d: -f6)}"
 BREW_PREFIX="/home/linuxbrew/.linuxbrew"
 SUDOERS_FILE="/etc/sudoers.d/99-homebrew-secure-path"
 BREW_SECURE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin"
-PRIVILEGED_PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-
-mkdir -p "$LOG_DIR"
-
-log_message() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
-}
-
-run_with_sudo() {
-  if [ "$(id -u)" -eq 0 ]; then
-    "$@"
-    return
-  fi
-
-  if command -v sudo >/dev/null 2>&1; then
-    sudo "$@"
-    return
-  fi
-
-  if command -v run0 >/dev/null 2>&1; then
-    run0 /usr/bin/env "PATH=$PRIVILEGED_PATH" "$@"
-    return
-  fi
-
-  log_message "ERROR: sudo or run0 is required to install prerequisites."
-  exit 1
-}
 
 run_as_target_user() {
   if [ "$(id -u)" -eq 0 ] && [ "$TARGET_USER" != "root" ]; then
@@ -209,22 +181,6 @@ find_missing_required_packages() {
 have_required_packages() {
   find_missing_required_packages
   [ "${#MISSING_PACKAGES[@]}" -eq 0 ]
-}
-
-source_brew_environment() {
-  local brew_bin
-
-  for brew_bin in \
-    "/home/linuxbrew/.linuxbrew/bin/brew" \
-    "/opt/homebrew/bin/brew" \
-    "/usr/local/bin/brew"; do
-    if [ -x "$brew_bin" ]; then
-      eval "$("$brew_bin" shellenv)"
-      return 0
-    fi
-  done
-
-  return 1
 }
 
 have_brew() {

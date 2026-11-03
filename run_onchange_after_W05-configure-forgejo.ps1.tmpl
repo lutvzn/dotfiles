@@ -1,27 +1,15 @@
-{{ if eq .chezmoi.os "windows" -}}
-# Logs tea into Forgejo with a token stored in Bitwarden and makes git use it,
-# so HTTPS pushes to git.lct.st work as soon as chezmoi apply finishes.
+{{ if and (eq .chezmoi.os "windows") .personal -}}
+# Logs tea into Forgejo with a token stored in Bitwarden, so HTTPS pushes to
+# git.lct.st work as soon as chezmoi apply finishes. ~/.config/git/config
+# already points git at tea for that host.
 
 $forgejoUrl = "https://git.lct.st"
 $teaLoginName = "git.lct.st"
 $bwServer = "https://vault.lct.st"
 $bwItem = "git.lct.st access token"
 
-$logDir = Join-Path $HOME ".config\personalScripts\logs"
+{{ template "write-log.ps1" . }}
 $logFile = Join-Path $logDir "run_onchange_after_W05-configure-forgejo.log"
-
-New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-
-function Write-Log {
-    param(
-        [string]$Message
-    )
-
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $entry = "$timestamp - $Message"
-    Write-Host $entry
-    Add-Content -Path $logFile -Value $entry
-}
 
 # Checks the token git will receive from tea against the Forgejo API.
 function Test-TeaLogin {
@@ -63,27 +51,6 @@ function Invoke-BwWithPassword {
     return $false
 }
 
-function Set-GitHelper {
-    # Windows PowerShell 5.1 (and PS 7 in Legacy mode) drops empty native arguments,
-    # so pass a literal "" pair there to give git an empty helper value.
-    $emptyArg = if ($PSNativeCommandArgumentPassing -in $null, 'Legacy') { '""' } else { '' }
-
-    git config --global --unset-all "credential.$forgejoUrl.helper" 2>$null
-    git config --global --add "credential.$forgejoUrl.helper" $emptyArg
-    if ($LASTEXITCODE -ne 0) {
-        Write-Log "ERROR: Failed to add $forgejoUrl credential reset helper."
-        exit 1
-    }
-
-    git config --global --add "credential.$forgejoUrl.helper" "!tea login helper"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Log "ERROR: Failed to add $forgejoUrl tea credential helper."
-        exit 1
-    }
-
-    Write-Log "SUCCESS: git uses tea for $forgejoUrl credentials."
-}
-
 {{ template "refresh-path.ps1" . }}
 
 foreach ($command in @("git", "tea", "bw")) {
@@ -95,7 +62,6 @@ foreach ($command in @("git", "tea", "bw")) {
 
 if (Test-TeaLogin) {
     Write-Log "tea is already logged in to $forgejoUrl."
-    Set-GitHelper
     exit 0
 }
 
@@ -157,5 +123,4 @@ if ($teaExitCode -ne 0 -or -not (Test-TeaLogin)) {
 }
 
 Write-Log "SUCCESS: tea is logged in to $forgejoUrl."
-Set-GitHelper
 {{ end -}}

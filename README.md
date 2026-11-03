@@ -134,6 +134,14 @@ chezmoi execute-template < run_onchange_01-install-packages.sh.tmpl | bash -n
 
 Installer logs are written to `~/.config/personalScripts/logs/`.
 
+`chezmoi init` asks once whether this is a **personal machine**. Answer no on
+work machines, containers, or VMs to skip user creation, NetBird, and the
+Forgejo login. To change it later, edit `personal` in
+`~/.config/chezmoi/chezmoi.toml`.
+
+Git identity and the GitHub/Forgejo credential helpers live in the managed
+`~/.config/git/config`. `~/.gitconfig` is left alone for machine-local settings.
+
 On Windows, run the same commands from PowerShell:
 
 ```powershell
@@ -147,7 +155,7 @@ chezmoi apply -v
 
 Node is managed **per user with fnm**, not installed system-wide. During
 `chezmoi apply`, the Pi bootstrap installs Node **26**, sets `fnm default 26`,
-and selects that default before installing Pi **1.0.4** and the pinned plugins.
+and selects that default before installing Pi **1.4.0** and the pinned plugins.
 Windows provisions `Schniz.fnm` and Git Bash through Winget. Linux provisions
 fnm through Homebrew. On macOS, the Pi bootstrap uses an existing Homebrew
 installation or the official fnm installer (without modifying shell profiles).
@@ -241,8 +249,8 @@ re-run `chezmoi apply`. Logs: `~/.config/personalScripts/logs/run_onchange_after
 
 After provisioning, `run_onchange_after_07-configure-forgejo.sh` (Linux) and
 `run_onchange_after_W05-configure-forgejo.ps1` (Windows) log `tea` in to
-`https://git.lct.st` and register it as git's credential helper for that host,
-so HTTPS pushes work as soon as `chezmoi apply` finishes.
+`https://git.lct.st`; the managed git config already uses tea as the credential
+helper for that host, so HTTPS pushes work as soon as `chezmoi apply` finishes.
 
 The token comes from Bitwarden (Vaultwarden at `https://vault.lct.st`):
 
