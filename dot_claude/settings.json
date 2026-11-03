@@ -1,0 +1,13 @@
+{
+  "model": "opus",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high",
+      "autoCompactWindow": 200000
+    }
+  },
+  "theme": "dark",
+  "attribution": {
+    "commit": ""
+  }
+}
