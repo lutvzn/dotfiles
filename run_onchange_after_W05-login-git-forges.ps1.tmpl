@@ -1,8 +1,9 @@
 {{ if eq .chezmoi.os "windows" -}}
 # Logs gh in to GitHub and, on personal machines, tea in to Forgejo and installs
-# the SSH commit signing key, so HTTPS git, the gh/tea CLIs, and signed commits
-# work as soon as chezmoi apply finishes. ~/.config/git/config already points git
-# at gh and tea as credential helpers and at the signing key.
+# the SSH commit signing key and the SSH login key, so HTTPS git, the gh/tea CLIs,
+# signed commits, and SSH work as soon as chezmoi apply finishes.
+# ~/.config/git/config already points git at gh and tea as credential helpers and
+# at the signing key; ~/.ssh/config already points ssh at the login key.
 # Personal machines read everything from Bitwarden with a single unlock; other
 # machines (no NetBird, so no Vaultwarden) use gh's browser login instead.
 
@@ -17,6 +18,8 @@ $signingBwItem = "lutvzn git signing key"
 $sshDir = Join-Path $HOME ".ssh"
 $signingKey = Join-Path $sshDir "git_signing_ed25519"
 $allowedSigners = Join-Path $sshDir "allowed_signers"
+$sshBwItem = "lutvzn_nopass_ssh"
+$sshKey = Join-Path $sshDir "lutvzn_nopass_ssh"
 
 {{ template "write-log.ps1" . }}
 $logFile = Join-Path $logDir "run_onchange_after_W05-login-git-forges.log"
@@ -44,19 +47,53 @@ function Test-TeaLogin {
     }
 }
 
-# Checks that the signing key, its public half, and the allowed signers entry
-# exist and belong together (ssh-keygen -l reads the public part of either file).
+# Checks that a private key and its .pub file exist and belong together
+# (ssh-keygen -l reads the public part of either file).
+function Test-SshKey {
+    param(
+        [string]$Key
+    )
+
+    if (-not ((Test-Path $Key) -and (Test-Path "$Key.pub"))) { return $false }
+
+    $privateFingerprint = (ssh-keygen -l -f $Key 2>$null) -split ' ' | Select-Object -Index 1
+    $publicFingerprint = (ssh-keygen -l -f "$Key.pub" 2>$null) -split ' ' | Select-Object -Index 1
+
+    return [bool]($privateFingerprint -and ($privateFingerprint -eq $publicFingerprint))
+}
+
+# Checks that the signing key is ready and listed in the allowed signers file.
 function Test-SigningKey {
-    if (-not ((Test-Path $signingKey) -and (Test-Path "$signingKey.pub") -and (Test-Path $allowedSigners))) {
-        return $false
-    }
+    if (-not ((Test-SshKey $signingKey) -and (Test-Path $allowedSigners))) { return $false }
 
-    $privateFingerprint = (ssh-keygen -l -f $signingKey 2>$null) -split ' ' | Select-Object -Index 1
-    $publicFingerprint = (ssh-keygen -l -f "$signingKey.pub" 2>$null) -split ' ' | Select-Object -Index 1
     $public = (((Get-Content "$signingKey.pub" -Raw).Trim()) -split ' ')[0..1] -join ' '
+    return Select-String -Path $allowedSigners -SimpleMatch -Quiet -Pattern $public
+}
 
-    return $privateFingerprint -and ($privateFingerprint -eq $publicFingerprint) -and
-        (Select-String -Path $allowedSigners -SimpleMatch -Quiet -Pattern $public)
+# Returns the public key (type and key, no comment) of a Bitwarden SSH key item.
+function Get-SshItemPublicKey {
+    param(
+        $Item
+    )
+
+    if (-not ($Item -and $Item.sshKey.publicKey)) { return $null }
+    return (($Item.sshKey.publicKey.Trim()) -split ' ')[0..1] -join ' '
+}
+
+# Writes the SSH key of a Bitwarden item to the given path and path.pub.
+# OpenSSH wants LF line endings, no BOM, and a key file only this user can read.
+function Write-SshKey {
+    param(
+        [string]$Key,
+        $Item
+    )
+
+    $utf8 = [Text.UTF8Encoding]::new($false)
+    $privateKey = ($Item.sshKey.privateKey -replace "`r`n", "`n").TrimEnd("`n") + "`n"
+    New-Item -ItemType Directory -Force -Path (Split-Path $Key) | Out-Null
+    [IO.File]::WriteAllText($Key, $privateKey, $utf8)
+    icacls $Key /inheritance:r /grant:r "${env:USERNAME}:F" | Out-Null
+    [IO.File]::WriteAllText("$Key.pub", "$(Get-SshItemPublicKey $Item)`n", $utf8)
 }
 
 {{ template "refresh-path.ps1" . }}
@@ -73,6 +110,7 @@ foreach ($command in $requiredCommands) {
 $githubNeeded = $false
 $forgejoNeeded = $false
 $signingNeeded = $false
+$sshNeeded = $false
 
 if (Test-GhLogin) {
     Write-Log "gh is already logged in to $githubHost."
@@ -92,20 +130,28 @@ if ($personal) {
     } else {
         $signingNeeded = $true
     }
+
+    if (Test-SshKey $sshKey) {
+        Write-Log "The SSH login key is already installed at $sshKey."
+    } else {
+        $sshNeeded = $true
+    }
 }
 
-if (-not $githubNeeded -and -not $forgejoNeeded -and -not $signingNeeded) { exit 0 }
+if (-not $githubNeeded -and -not $forgejoNeeded -and -not $signingNeeded -and -not $sshNeeded) { exit 0 }
 
 # Not GITHUB_TOKEN/GH_TOKEN: gh reads those from the environment.
 $ghLoginToken = $null
 $forgejoToken = $null
 $signingItem = $null
+$sshItem = $null
 
 if ($personal) {
     if (-not (Unlock-Bitwarden $bwServer)) { exit 1 }
     if ($githubNeeded) { $ghLoginToken = Get-BitwardenPassword $githubBwItem }
     if ($forgejoNeeded) { $forgejoToken = Get-BitwardenPassword $forgejoBwItem }
     if ($signingNeeded) { $signingItem = Get-BitwardenItem $signingBwItem }
+    if ($sshNeeded) { $sshItem = Get-BitwardenItem $sshBwItem }
     Lock-Bitwarden
 }
 
@@ -157,10 +203,7 @@ if ($forgejoNeeded) {
 
 if ($signingNeeded) {
     $gitEmail = git config --get user.email
-    $signingPublic = $null
-    if ($signingItem -and $signingItem.sshKey.publicKey) {
-        $signingPublic = (($signingItem.sshKey.publicKey.Trim()) -split ' ')[0..1] -join ' '
-    }
+    $signingPublic = Get-SshItemPublicKey $signingItem
 
     if (-not $signingPublic) {
         Write-Log "ERROR: Could not read the SSH key of Bitwarden item '$signingBwItem'."
@@ -169,15 +212,9 @@ if ($signingNeeded) {
         Write-Log "ERROR: git has no user.email to put in $allowedSigners."
         $status = 1
     } else {
-        # OpenSSH wants LF line endings, no BOM, and a key file only this user can read.
-        $utf8 = [Text.UTF8Encoding]::new($false)
-        $privateKey = ($signingItem.sshKey.privateKey -replace "`r`n", "`n").TrimEnd("`n") + "`n"
-        New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
-        [IO.File]::WriteAllText($signingKey, $privateKey, $utf8)
-        icacls $signingKey /inheritance:r /grant:r "${env:USERNAME}:F" | Out-Null
-        [IO.File]::WriteAllText("$signingKey.pub", "$signingPublic`n", $utf8)
-        [IO.File]::WriteAllText($allowedSigners, "$gitEmail namespaces=`"git`" $signingPublic`n", $utf8)
-        $privateKey = $null
+        Write-SshKey $signingKey $signingItem
+        [IO.File]::WriteAllText($allowedSigners, "$gitEmail namespaces=`"git`" $signingPublic`n",
+            [Text.UTF8Encoding]::new($false))
 
         if (Test-SigningKey) {
             $fingerprint = (ssh-keygen -l -f "$signingKey.pub") -split ' ' | Select-Object -Index 1
@@ -188,6 +225,24 @@ if ($signingNeeded) {
         }
     }
     $signingItem = $null
+}
+
+if ($sshNeeded) {
+    if (-not (Get-SshItemPublicKey $sshItem)) {
+        Write-Log "ERROR: Could not read the SSH key of Bitwarden item '$sshBwItem'."
+        $status = 1
+    } else {
+        Write-SshKey $sshKey $sshItem
+
+        if (Test-SshKey $sshKey) {
+            $fingerprint = (ssh-keygen -l -f "$sshKey.pub") -split ' ' | Select-Object -Index 1
+            Write-Log "SUCCESS: Installed the SSH login key $fingerprint at $sshKey."
+        } else {
+            Write-Log "ERROR: The key in Bitwarden item '$sshBwItem' is not a usable SSH key."
+            $status = 1
+        }
+    }
+    $sshItem = $null
 }
 
 exit $status

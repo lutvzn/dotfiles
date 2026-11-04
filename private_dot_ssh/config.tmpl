@@ -1,0 +1,6 @@
+{{- if .personal -}}
+# The login key is installed from Bitwarden by the git forge login script.
+# Setting IdentityFile replaces ssh's default id_* keys, so list any others here.
+Host *
+	IdentityFile ~/.ssh/lutvzn_nopass_ssh
+{{ end -}}

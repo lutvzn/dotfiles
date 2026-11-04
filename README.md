@@ -250,12 +250,13 @@ re-run `chezmoi apply`. Logs: `~/.config/personalScripts/logs/run_onchange_after
 After provisioning, `run_onchange_after_07-login-git-forges.sh` (Linux) and
 `run_onchange_after_W05-login-git-forges.ps1` (Windows) log `gh` in to GitHub
 and, on personal machines, `tea` in to `https://git.lct.st` and install the SSH
-commit signing key. The managed git config already uses gh and tea as credential
-helpers for those hosts and signs every commit and tag on personal machines, so
-HTTPS git, the `gh`/`tea` CLIs, and signed commits work as soon as
-`chezmoi apply` finishes. Logins and keys that already work are left alone.
+commit signing key and the SSH login key. The managed git config already uses gh
+and tea as credential helpers for those hosts and signs every commit and tag on
+personal machines, and the managed `~/.ssh/config` (personal machines only) makes
+ssh use the login key, so HTTPS git, the `gh`/`tea` CLIs, signed commits, and SSH
+work as soon as `chezmoi apply` finishes. Logins and keys that already work are left alone.
 
-On personal machines the tokens and the signing key come from Bitwarden
+On personal machines the tokens and the SSH keys come from Bitwarden
 (Vaultwarden at `https://vault.lct.st`), unlocked once for all of them:
 
 1. In GitHub, create a classic personal access token under Settings → Developer
@@ -273,6 +274,9 @@ On personal machines the tokens and the signing key come from Bitwarden
      prompted. Forgejo only marks commits verified when the committer email
      (`106083845+lutvzn@users.noreply.github.com`) is an activated email on
      your account.
+4. In Bitwarden, create an **SSH key** item named `lutvzn_nopass_ssh` without a
+   passphrase, and add its public key to `~/.ssh/authorized_keys` on the hosts
+   you log in to (and as an **Authentication Key** on the forges for SSH git).
 
 Create the signing key item before applying on a personal machine: git is set
 to sign every commit, so commits fail until the key is installed. To skip
@@ -282,7 +286,8 @@ During apply, the script logs in to or unlocks Bitwarden (prompting for your
 master password), reads the tokens and key, locks the vault again, runs
 `gh auth login --with-token` and `tea login add`, and writes the key to
 `~/.ssh/git_signing_ed25519` (plus `.pub`) and `~/.ssh/allowed_signers`, which
-lets `git log --show-signature` verify commits locally. To run unattended, export an
+lets `git log --show-signature` verify commits locally, and the login key to
+`~/.ssh/lutvzn_nopass_ssh` (plus `.pub`). To run unattended, export an
 unlocked `BW_SESSION` first. If the GitHub item is missing, and on non-personal
 machines (which cannot reach Vaultwarden), `gh` falls back to its browser login.
 gh stores its token in the system keyring and tea in `~/.config/tea/config.yml`;
@@ -291,8 +296,8 @@ none of these secrets are stored in this repository. Logs:
 (Windows: `run_onchange_after_W05-login-git-forges.log`).
 
 The script is a `run_onchange_` script, so it only reruns by itself when its
-contents change. After rotating a token or the signing key in Bitwarden, delete
-the old key files (for the key) and run it directly:
+contents change. After rotating a token or an SSH key in Bitwarden, delete
+the old key files (for a key) and run it directly:
 
 ```sh
 bash <(chezmoi execute-template < "$(chezmoi source-path)/run_onchange_after_07-login-git-forges.sh.tmpl")

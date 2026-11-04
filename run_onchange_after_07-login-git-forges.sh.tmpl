@@ -2,9 +2,10 @@
 #!/bin/bash
 
 # Logs gh in to GitHub and, on personal machines, tea in to Forgejo and installs
-# the SSH commit signing key, so HTTPS git, the gh/tea CLIs, and signed commits
-# work as soon as chezmoi apply finishes. ~/.config/git/config already points git
-# at gh and tea as credential helpers and at the signing key.
+# the SSH commit signing key and the SSH login key, so HTTPS git, the gh/tea CLIs,
+# signed commits, and SSH work as soon as chezmoi apply finishes.
+# ~/.config/git/config already points git at gh and tea as credential helpers and
+# at the signing key; ~/.ssh/config already points ssh at the login key.
 # Personal machines read everything from Bitwarden with a single unlock; other
 # machines (no NetBird, so no Vaultwarden) use gh's browser login instead.
 
@@ -21,6 +22,8 @@ TEA_LOGIN_NAME="git.lct.st"
 SIGNING_BW_ITEM="lutvzn git signing key"
 SIGNING_KEY="$HOME/.ssh/git_signing_ed25519"
 ALLOWED_SIGNERS="$HOME/.ssh/allowed_signers"
+SSH_BW_ITEM="lutvzn_nopass_ssh"
+SSH_KEY="$HOME/.ssh/lutvzn_nopass_ssh"
 
 # Checks the stored gh token against the GitHub API.
 github_login_works() {
@@ -39,15 +42,32 @@ tea_login_works() {
       | curl -fsS -o /dev/null -H @- "$FORGEJO_URL/api/v1/user"
 }
 
-# Checks that the signing key, its public half, and the allowed signers entry
-# exist and belong together.
-signing_key_ready() {
-  local public
+# Checks that an unencrypted private key and its .pub file exist and belong together.
+ssh_key_ready() {
+  [ -s "$1" ] && [ -s "$1.pub" ] \
+    && [ "$(ssh-keygen -y -P '' -f "$1" 2>/dev/null | cut -d' ' -f1,2)" = "$(cut -d' ' -f1,2 "$1.pub")" ]
+}
 
-  [ -s "$SIGNING_KEY" ] && [ -s "$SIGNING_KEY.pub" ] && [ -s "$ALLOWED_SIGNERS" ] || return 1
-  public="$(cut -d' ' -f1,2 "$SIGNING_KEY.pub")"
-  [ "$(ssh-keygen -y -P '' -f "$SIGNING_KEY" 2>/dev/null | cut -d' ' -f1,2)" = "$public" ] \
-    && grep -qF "$public" "$ALLOWED_SIGNERS"
+# Checks that the signing key is ready and listed in the allowed signers file.
+signing_key_ready() {
+  ssh_key_ready "$SIGNING_KEY" && [ -s "$ALLOWED_SIGNERS" ] \
+    && grep -qF "$(cut -d' ' -f1,2 "$SIGNING_KEY.pub")" "$ALLOWED_SIGNERS"
+}
+
+# Prints the public key (type and key, no comment) of a Bitwarden SSH key item.
+ssh_item_public_key() {
+  printf '%s' "$1" | jq -r '.sshKey.publicKey // empty' 2>/dev/null | cut -d' ' -f1,2
+}
+
+# Writes the SSH key of a Bitwarden item (JSON) to the given path and path.pub.
+write_ssh_key() {
+  local key="$1" item="$2"
+
+  mkdir -p "$(dirname "$key")"
+  chmod 700 "$(dirname "$key")"
+  (umask 077 && printf '%s' "$item" | jq -r '.sshKey.privateKey' >"$key")
+  chmod 600 "$key"
+  printf '%s\n' "$(ssh_item_public_key "$item")" >"$key.pub"
 }
 
 source_brew_environment || true
@@ -67,6 +87,7 @@ TEA_BIN="$(command -v tea || true)"
 GITHUB_NEEDED=false
 FORGEJO_NEEDED=false
 SIGNING_NEEDED=false
+SSH_NEEDED=false
 
 if github_login_works; then
   log_message "INFO: gh is already logged in to $GITHUB_HOST."
@@ -86,21 +107,29 @@ if [ "$PERSONAL" = true ]; then
   else
     SIGNING_NEEDED=true
   fi
+
+  if ssh_key_ready "$SSH_KEY"; then
+    log_message "INFO: The SSH login key is already installed at $SSH_KEY."
+  else
+    SSH_NEEDED=true
+  fi
 fi
 
 [ "$GITHUB_NEEDED" = false ] && [ "$FORGEJO_NEEDED" = false ] \
-  && [ "$SIGNING_NEEDED" = false ] && exit 0
+  && [ "$SIGNING_NEEDED" = false ] && [ "$SSH_NEEDED" = false ] && exit 0
 
 # Not GITHUB_TOKEN/GH_TOKEN: gh reads those from the environment.
 GH_LOGIN_TOKEN=""
 FORGEJO_TOKEN=""
 SIGNING_ITEM=""
+SSH_ITEM=""
 
 if [ "$PERSONAL" = true ]; then
   bitwarden_unlock "$BW_SERVER" || exit 1
   [ "$GITHUB_NEEDED" = true ] && GH_LOGIN_TOKEN="$(bitwarden_password "$GITHUB_BW_ITEM")"
   [ "$FORGEJO_NEEDED" = true ] && FORGEJO_TOKEN="$(bitwarden_password "$FORGEJO_BW_ITEM")"
   [ "$SIGNING_NEEDED" = true ] && SIGNING_ITEM="$(bitwarden_item "$SIGNING_BW_ITEM")"
+  [ "$SSH_NEEDED" = true ] && SSH_ITEM="$(bitwarden_item "$SSH_BW_ITEM")"
   bitwarden_lock
 fi
 
@@ -149,7 +178,7 @@ fi
 
 if [ "$SIGNING_NEEDED" = true ]; then
   GIT_EMAIL="$(git config --get user.email)"
-  SIGNING_PUBLIC="$(printf '%s' "$SIGNING_ITEM" | jq -r '.sshKey.publicKey // empty' 2>/dev/null | cut -d' ' -f1,2)"
+  SIGNING_PUBLIC="$(ssh_item_public_key "$SIGNING_ITEM")"
 
   if [ -z "$SIGNING_PUBLIC" ]; then
     log_message "ERROR: Could not read the SSH key of Bitwarden item '$SIGNING_BW_ITEM'."
@@ -158,11 +187,7 @@ if [ "$SIGNING_NEEDED" = true ]; then
     log_message "ERROR: git has no user.email to put in $ALLOWED_SIGNERS."
     STATUS=1
   else
-    mkdir -p "$(dirname "$SIGNING_KEY")"
-    chmod 700 "$(dirname "$SIGNING_KEY")"
-    (umask 077 && printf '%s' "$SIGNING_ITEM" | jq -r '.sshKey.privateKey' >"$SIGNING_KEY")
-    chmod 600 "$SIGNING_KEY"
-    printf '%s\n' "$SIGNING_PUBLIC" >"$SIGNING_KEY.pub"
+    write_ssh_key "$SIGNING_KEY" "$SIGNING_ITEM"
     printf '%s namespaces="git" %s\n' "$GIT_EMAIL" "$SIGNING_PUBLIC" >"$ALLOWED_SIGNERS"
 
     if signing_key_ready; then
@@ -173,6 +198,23 @@ if [ "$SIGNING_NEEDED" = true ]; then
     fi
   fi
   SIGNING_ITEM=""
+fi
+
+if [ "$SSH_NEEDED" = true ]; then
+  if [ -z "$(ssh_item_public_key "$SSH_ITEM")" ]; then
+    log_message "ERROR: Could not read the SSH key of Bitwarden item '$SSH_BW_ITEM'."
+    STATUS=1
+  else
+    write_ssh_key "$SSH_KEY" "$SSH_ITEM"
+
+    if ssh_key_ready "$SSH_KEY"; then
+      log_message "SUCCESS: Installed the SSH login key $(ssh-keygen -l -f "$SSH_KEY.pub" | cut -d' ' -f2) at $SSH_KEY."
+    else
+      log_message "ERROR: The key in Bitwarden item '$SSH_BW_ITEM' is not a usable unencrypted SSH key."
+      STATUS=1
+    fi
+  fi
+  SSH_ITEM=""
 fi
 
 exit "$STATUS"
